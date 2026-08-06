@@ -734,7 +734,7 @@ const NOW = new Date('2026-02-01T12:00:00Z');
 
 const games: GameInput[] = [
 	{ id: 1, playedAt: '2026-01-01T10:00:00Z', format: '2v2', winnerSide: 'A', sideA: [1, 2], sideB: [3, 4] },
-	{ id: 2, playedAt: '2026-01-02T10:00:00Z', format: '2v2', winnerSide: 'B', sideA: [3, 4], sideB: [2, 1] }
+	{ id: 2, playedAt: '2026-01-02T10:00:00Z', format: '2v2', winnerSide: 'A', sideA: [3, 4], sideB: [2, 1] }
 ];
 
 describe('teamStats', () => {
