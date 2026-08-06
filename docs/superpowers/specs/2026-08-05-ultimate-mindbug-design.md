@@ -57,9 +57,7 @@ bugs. Retuning K or fixing a mis-logged game simply re-derives everything.
 
 ### Tables
 
-- **`players`** — `id` (unique identity), `name` (**not** required to be
-  unique — two players may share a display name; identity is the `id`),
-  `is_active` (bool), `created_at`
+- **`players`** — `id`, `name` (unique), `is_active` (bool), `created_at`
 - **`games`** — `id`, `played_at` (date/timestamp), `format` (`'2v2' | '3v3'`),
   `winner_side` (`'A' | 'B'`), `created_at`
 - **`game_participants`** — `id`, `game_id` (FK), `player_id` (FK),
