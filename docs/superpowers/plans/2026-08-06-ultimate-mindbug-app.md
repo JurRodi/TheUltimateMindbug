@@ -558,7 +558,7 @@ const NOW = new Date('2026-01-31T12:00:00Z');
 const games: GameInput[] = [
 	{ id: 1, playedAt: '2026-01-01T10:00:00Z', format: '2v2', winnerSide: 'A', sideA: [1, 2], sideB: [3, 4] },
 	{ id: 2, playedAt: '2026-01-15T10:00:00Z', format: '3v3', winnerSide: 'B', sideA: [1, 2, 5], sideB: [3, 4, 6] },
-	{ id: 3, playedAt: '2026-01-30T10:00:00Z', format: '2v2', winnerSide: 'B', sideA: [1, 3], sideB: [2, 4] }
+	{ id: 3, playedAt: '2026-01-30T10:00:00Z', format: '2v2', winnerSide: 'B', sideA: [1, 2], sideB: [4, 6] }
 ];
 
 describe('filterGames', () => {
