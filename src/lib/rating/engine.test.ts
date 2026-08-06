@@ -22,3 +22,58 @@ describe('DEFAULT_CONFIG', () => {
 		expect(DEFAULT_CONFIG).toEqual({ startRating: 1000, k: 24 });
 	});
 });
+
+import { computeTrack } from './engine';
+import type { GameInput } from '$lib/types';
+
+const g = (over: Partial<GameInput> & Pick<GameInput, 'id' | 'playedAt' | 'winnerSide' | 'sideA' | 'sideB'>): GameInput => ({
+	format: '2v2',
+	...over
+});
+
+describe('computeTrack', () => {
+	it('returns empty state for no games', () => {
+		const r = computeTrack([]);
+		expect(r.current).toEqual({});
+		expect(r.history).toEqual([]);
+	});
+
+	it('applies a symmetric ±K delta for an even 2v2 (all start equal)', () => {
+		const r = computeTrack([
+			g({ id: 1, playedAt: '2026-01-01T10:00:00Z', winnerSide: 'A', sideA: [1, 2], sideB: [3, 4] })
+		]);
+		// equal ratings => E = 0.5 => delta = 24 * (1 - 0.5) = 12 for winners, -12 for losers
+		expect(r.current[1]).toBeCloseTo(1012, 6);
+		expect(r.current[2]).toBeCloseTo(1012, 6);
+		expect(r.current[3]).toBeCloseTo(988, 6);
+		expect(r.current[4]).toBeCloseTo(988, 6);
+	});
+
+	it('records a chronological history snapshot per participant per game', () => {
+		const r = computeTrack([
+			g({ id: 7, playedAt: '2026-01-01T10:00:00Z', winnerSide: 'A', sideA: [1, 2], sideB: [3, 4] })
+		]);
+		expect(r.history).toHaveLength(4);
+		const p1 = r.history.find((h) => h.playerId === 1)!;
+		expect(p1).toMatchObject({ gameId: 7, ratingBefore: 1000, ratingAfter: 1012, delta: 12 });
+	});
+
+	it('processes games in chronological order regardless of input order', () => {
+		const later = g({ id: 2, playedAt: '2026-01-02T10:00:00Z', winnerSide: 'B', sideA: [1, 2], sideB: [3, 4] });
+		const earlier = g({ id: 1, playedAt: '2026-01-01T10:00:00Z', winnerSide: 'A', sideA: [1, 2], sideB: [3, 4] });
+		const r = computeTrack([later, earlier]);
+		// game1: 1&2 -> 1012, 3&4 -> 988. game2: B wins; teamA=1012, teamB=988
+		// E_A = 1/(1+10^((988-1012)/400)) ≈ 0.5345; A loses => delta_A = 24*(0-0.5345) ≈ -12.83
+		expect(r.current[1]).toBeCloseTo(1012 - 12.828, 2);
+		expect(r.current[3]).toBeCloseTo(988 + 12.828, 2);
+	});
+
+	it('does not mutate the input array', () => {
+		const games = [
+			g({ id: 2, playedAt: '2026-01-02T10:00:00Z', winnerSide: 'A', sideA: [1, 2], sideB: [3, 4] }),
+			g({ id: 1, playedAt: '2026-01-01T10:00:00Z', winnerSide: 'A', sideA: [1, 2], sideB: [3, 4] })
+		];
+		computeTrack(games);
+		expect(games[0].id).toBe(2);
+	});
+});
