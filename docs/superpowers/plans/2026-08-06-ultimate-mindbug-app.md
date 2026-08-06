@@ -59,23 +59,22 @@ src/
         test-db.ts                     # pglite test-db factory (test helper)
     components/
       Nav.svelte
+      ViewTabs.svelte                  # Players/Teams toggle (?view)
       FilterBar.svelte
       RankCard.svelte
       RatingChart.svelte
   routes/
     +layout.svelte                     # app shell + Nav
-    +page.svelte                       # leaderboard
-    +page.server.ts
+    +page.svelte                       # leaderboard: Players + Teams tabs (?view=players|teams)
+    +page.server.ts                    # loads both player ranking and team records
     login/+page.svelte
     login/+page.server.ts
     log/+page.svelte                   # log a game (protected)
     log/+page.server.ts
-    players/+page.svelte               # manage players
+    players/+page.svelte               # manage players (roster)
     players/+page.server.ts
     players/[id]/+page.svelte          # player profile
     players/[id]/+page.server.ts
-    teams/+page.svelte                 # team stats
-    teams/+page.server.ts
 static/
   manifest.webmanifest
   icons/icon.svg  icons/icon-192.png  icons/icon-512.png  icons/maskable-512.png
@@ -1467,7 +1466,6 @@ Create `src/lib/components/Nav.svelte`:
 	import { page } from '$app/state';
 	const links = [
 		{ href: '/', label: 'Board' },
-		{ href: '/teams', label: 'Teams' },
 		{ href: '/players', label: 'Players' },
 		{ href: '/log', label: 'Log' }
 	];
@@ -1628,17 +1626,22 @@ git commit -m "feat: add login page and password gate"
 
 ---
 
-## Task 14: Leaderboard (home)
+## Task 14: Leaderboard (home) — Players & Teams tabs
 
 **Files:**
-- Create: `src/routes/+page.server.ts`, `src/lib/components/FilterBar.svelte`, `src/lib/components/RankCard.svelte`
+- Create: `src/routes/+page.server.ts`, `src/lib/components/FilterBar.svelte`, `src/lib/components/RankCard.svelte`, `src/lib/components/ViewTabs.svelte`
 - Replace: `src/routes/+page.svelte`
 
 **Interfaces:**
-- Consumes: `db` from `$lib/server/db`; `getPlayers`, `getAllGames` from queries; `computeRatings` from rating engine; `allPlayerStats` from stats; `Track`, `DateRange` from `$lib/types`.
-- Produces: leaderboard `load` returning `{ rows, format, range }` where each row is `{ player, rating, rated, games, wins, winRate, streak }`, sorted by rating desc (rated players first). `FilterBar` reads/writes `?format` and `?range` in the URL. `RankCard` renders one row.
+- Consumes: `db` from `$lib/server/db`; `getPlayers`, `getAllGames` from queries; `computeRatings` from rating engine; `allPlayerStats` from stats; `teamStats` from `$lib/stats/teams`; `Track`, `DateRange` from `$lib/types`.
+- Produces: a single leaderboard `load` returning `{ view, format, range, rows, teams }` where:
+  - `view` is `'players' | 'teams'` from `?view` (default `'players'`).
+  - `rows` (player ranking) — each `{ player, rating, rated, games, wins, winRate, streak }`, sorted by rating desc (rated first).
+  - `teams` (line-up records) — each `{ playerIds, names, games, wins, losses, winRate }`, from `teamStats`, in that function's sort order.
+  - Both are always computed from one `getAllGames` call; the page renders whichever `view` selects.
+  - `FilterBar` reads/writes `?format` and `?range`; `ViewTabs` reads/writes `?view`. `RankCard` renders one player row. Teams have no Elo — they rank by record.
 
-- [ ] **Step 1: Implement the leaderboard load**
+- [ ] **Step 1: Implement the leaderboard load (both views)**
 
 Create `src/routes/+page.server.ts`:
 
@@ -1647,23 +1650,27 @@ import { db } from '$lib/server/db';
 import { getPlayers, getAllGames } from '$lib/server/db/queries';
 import { computeRatings } from '$lib/rating/engine';
 import { allPlayerStats } from '$lib/stats/aggregate';
+import { teamStats } from '$lib/stats/teams';
 import type { Track, DateRange } from '$lib/types';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ url }) => {
+	const view = (url.searchParams.get('view') ?? 'players') as 'players' | 'teams';
 	const format = (url.searchParams.get('format') ?? 'total') as Track;
 	const range = (url.searchParams.get('range') ?? 'all') as DateRange;
+	const now = new Date();
 
 	const [players, games] = await Promise.all([getPlayers(db), getAllGames(db)]);
+	const nameById = new Map(players.map((p) => [p.id, p.name]));
+
+	// Player ranking. Note: allPlayerStats takes the Track string (`format`), NOT the TrackResult.
 	const track = computeRatings(games)[format];
-	// Note: allPlayerStats takes the Track string (`format`), NOT the TrackResult (`track`).
 	const stats = allPlayerStats(
 		games,
 		players.map((p) => p.id),
-		{ track: format, range, now: new Date() }
+		{ track: format, range, now }
 	);
 	const statById = new Map(stats.map((s) => [s.playerId, s]));
-
 	const rows = players
 		.filter((p) => p.isActive)
 		.map((p) => {
@@ -1681,13 +1688,66 @@ export const load: PageServerLoad = async ({ url }) => {
 		})
 		.sort((a, b) => (a.rated === b.rated ? b.rating - a.rating : a.rated ? -1 : 1));
 
-	return { rows, format, range };
+	// Team records (no Elo — ranked by record inside teamStats).
+	const teams = teamStats(games, { track: format, range, now }).map((t) => ({
+		...t,
+		names: t.playerIds.map((id) => nameById.get(id) ?? `#${id}`)
+	}));
+
+	return { view, format, range, rows, teams };
 };
 ```
 
-Note: `allPlayerStats` takes `track` (a `Track`), not a `TrackResult`. Pass `format` here — correct the call to `{ track: format, range, now: new Date() }`.
+- [ ] **Step 2: Build `ViewTabs`**
 
-- [ ] **Step 2: Build `FilterBar`**
+Create `src/lib/components/ViewTabs.svelte`:
+
+```svelte
+<script lang="ts">
+	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
+	let { view }: { view: string } = $props();
+
+	function set(value: string) {
+		const url = new URL(page.url);
+		url.searchParams.set('view', value);
+		goto(url, { replaceState: true, keepFocus: true, noScroll: true });
+	}
+</script>
+
+<div class="tabs">
+	<button class:on={view === 'players'} onclick={() => set('players')}>Players</button>
+	<button class:on={view === 'teams'} onclick={() => set('teams')}>Teams</button>
+</div>
+
+<style>
+	.tabs {
+		display: flex;
+		gap: 0.25rem;
+		background: var(--surface);
+		border-radius: 999px;
+		padding: 0.3rem;
+		margin-top: 0.75rem;
+	}
+	button {
+		flex: 1;
+		border: none;
+		background: transparent;
+		color: var(--muted);
+		font-family: var(--display);
+		font-size: 0.9rem;
+		padding: 0.5rem;
+		border-radius: 999px;
+		cursor: pointer;
+	}
+	button.on {
+		background: var(--accent);
+		color: #06231a;
+	}
+</style>
+```
+
+- [ ] **Step 3: Build `FilterBar`**
 
 Create `src/lib/components/FilterBar.svelte`:
 
@@ -1759,7 +1819,7 @@ Create `src/lib/components/FilterBar.svelte`:
 </style>
 ```
 
-- [ ] **Step 3: Build `RankCard`**
+- [ ] **Step 4: Build `RankCard`**
 
 Create `src/lib/components/RankCard.svelte`:
 
@@ -1830,21 +1890,34 @@ Create `src/lib/components/RankCard.svelte`:
 </style>
 ```
 
-- [ ] **Step 4: Build the leaderboard page**
+- [ ] **Step 5: Build the leaderboard page (Players/Teams tabs)**
 
 Replace `src/routes/+page.svelte` with:
 
 ```svelte
 <script lang="ts">
+	import ViewTabs from '$lib/components/ViewTabs.svelte';
 	import FilterBar from '$lib/components/FilterBar.svelte';
 	import RankCard from '$lib/components/RankCard.svelte';
 	let { data } = $props();
 </script>
 
 <h1>The Ultimate Mindbug 🐛</h1>
+<ViewTabs view={data.view} />
 <FilterBar format={data.format} range={data.range} />
 
-{#if data.rows.length === 0}
+{#if data.view === 'teams'}
+	{#if data.teams.length === 0}
+		<p class="card">No games logged yet.</p>
+	{:else}
+		{#each data.teams as t}
+			<div class="card team">
+				<span class="names">{t.names.join(' + ')}</span>
+				<span class="pill">{t.wins}W · {t.losses}L · {Math.round(t.winRate * 100)}%</span>
+			</div>
+		{/each}
+	{/if}
+{:else if data.rows.length === 0}
 	<p class="card">No players yet. Add the crew on the Players page.</p>
 {:else}
 	{#each data.rows as row, i}
@@ -1859,18 +1932,30 @@ Replace `src/routes/+page.svelte` with:
 		/>
 	{/each}
 {/if}
+
+<style>
+	.team {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 0.5rem;
+	}
+	.names {
+		font-weight: 800;
+	}
+</style>
 ```
 
-- [ ] **Step 5: Verify build**
+- [ ] **Step 6: Verify build**
 
 Run: `npm run build`
 Expected: build succeeds. (With no DB configured yet, the page load will error at runtime only when a DB is connected — build/typecheck should pass. If typecheck runs, ensure no type errors.)
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
-git add src/routes/+page.server.ts src/routes/+page.svelte src/lib/components/FilterBar.svelte src/lib/components/RankCard.svelte
-git commit -m "feat: add leaderboard with format/date filters"
+git add src/routes/+page.server.ts src/routes/+page.svelte src/lib/components/ViewTabs.svelte src/lib/components/FilterBar.svelte src/lib/components/RankCard.svelte
+git commit -m "feat: add leaderboard with Players/Teams tabs and filters"
 ```
 
 ---
@@ -2249,14 +2334,16 @@ git commit -m "feat: add player profile with three-track rating chart"
 
 ---
 
-## Task 17: Manage players + team stats pages
+## Task 17: Manage players page
 
 **Files:**
-- Create: `src/routes/players/+page.server.ts`, `src/routes/players/+page.svelte`, `src/routes/teams/+page.server.ts`, `src/routes/teams/+page.svelte`
+- Create: `src/routes/players/+page.server.ts`, `src/routes/players/+page.svelte`
 
 **Interfaces:**
-- Consumes: `db`, `getPlayers`, `addPlayer`, `setPlayerActive`, `getAllGames`; `isAuthed`, `requireAuth`; `teamStats`; `Track`, `DateRange`.
-- Produces: players `load` returning `{ players, canEdit }` (canEdit = `isAuthed`); `addPlayer` and `toggleActive` actions (both `requireAuth`). Teams `load` returning `{ teams, players, format, range }`.
+- Consumes: `db`, `getPlayers`, `addPlayer`, `setPlayerActive`; `isAuthed`, `requireAuth`.
+- Produces: players `load` returning `{ players, canEdit }` (canEdit = `isAuthed`); `add` and `toggle` actions (both `requireAuth`).
+
+Note: team records live on the leaderboard's Teams tab (Task 14), so there is no `/teams` route. This task is only the roster-management page.
 
 - [ ] **Step 1: Implement manage-players load + actions**
 
@@ -2366,77 +2453,16 @@ Create `src/routes/players/+page.svelte`:
 </style>
 ```
 
-- [ ] **Step 3: Implement team-stats load**
-
-Create `src/routes/teams/+page.server.ts`:
-
-```ts
-import { db } from '$lib/server/db';
-import { getPlayers, getAllGames } from '$lib/server/db/queries';
-import { teamStats } from '$lib/stats/teams';
-import type { Track, DateRange } from '$lib/types';
-import type { PageServerLoad } from './$types';
-
-export const load: PageServerLoad = async ({ url }) => {
-	const format = (url.searchParams.get('format') ?? 'total') as Track;
-	const range = (url.searchParams.get('range') ?? 'all') as DateRange;
-	const [players, games] = await Promise.all([getPlayers(db), getAllGames(db)]);
-	const nameById = new Map(players.map((p) => [p.id, p.name]));
-	const teams = teamStats(games, { track: format, range, now: new Date() }).map((t) => ({
-		...t,
-		names: t.playerIds.map((id) => nameById.get(id) ?? `#${id}`)
-	}));
-	return { teams, format, range };
-};
-```
-
-- [ ] **Step 4: Build the team-stats page**
-
-Create `src/routes/teams/+page.svelte`:
-
-```svelte
-<script lang="ts">
-	import FilterBar from '$lib/components/FilterBar.svelte';
-	let { data } = $props();
-</script>
-
-<h1>Team records</h1>
-<FilterBar format={data.format} range={data.range} />
-
-{#if data.teams.length === 0}
-	<p class="card">No games logged yet.</p>
-{:else}
-	{#each data.teams as t}
-		<div class="card row">
-			<span class="names">{t.names.join(' + ')}</span>
-			<span class="pill">{t.wins}W · {t.losses}L · {Math.round(t.winRate * 100)}%</span>
-		</div>
-	{/each}
-{/if}
-
-<style>
-	.row {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 0.5rem;
-	}
-	.names {
-		font-weight: 800;
-	}
-</style>
-```
-
-- [ ] **Step 5: Verify build**
+- [ ] **Step 3: Verify build**
 
 Run: `npm run build`
 Expected: build succeeds.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
-git add src/routes/players/+page.server.ts src/routes/players/+page.svelte src/routes/teams/
-git commit -m "feat: add manage-players and team-records pages"
+git add src/routes/players/+page.server.ts src/routes/players/+page.svelte
+git commit -m "feat: add manage-players page"
 ```
 
 ---
@@ -2612,8 +2638,8 @@ git commit -m "chore: wire Vercel adapter, migration scripts, and deploy docs"
 - Elo per-player rating, team-averaged, shared delta → Tasks 3–5. ✅
 - Three tracks (total/2v2/3v3) → Task 5, surfaced in Tasks 14 & 16. ✅
 - Win rate, all-time wins, games played, streak → Task 6. ✅
-- Filter by format, date range, player → Task 6 (`filterGames`), Tasks 14/16/17 (UI). ✅
-- Team-combo stats → Tasks 7 & 17. ✅
+- Filter by format, date range, player → Task 6 (`filterGames`), Task 14 (leaderboard/teams filters), Task 16 (per-player profile). ✅
+- Team-combo stats → Task 7 (logic), surfaced on the leaderboard's Teams tab in Task 14. ✅
 - Data model (players, games, game_participants; unique name; derived ratings) → Tasks 8–10. ✅
 - Shared-password access; open viewing → Tasks 11, 13; gating in 15 & 17. ✅
 - SvelteKit + Neon + Drizzle + Vercel → Tasks 1, 8, 19. ✅
