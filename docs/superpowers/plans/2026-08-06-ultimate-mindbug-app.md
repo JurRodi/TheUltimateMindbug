@@ -111,8 +111,13 @@ Choose, when prompted: template **SvelteKit minimal**; type checking **TypeScrip
 ```bash
 npm install drizzle-orm @neondatabase/serverless
 npm install -D drizzle-kit @electric-sql/pglite @sveltejs/adapter-vercel
-npm install @fontsource/poppins @fontsource/nunito
 ```
+
+> Fonts: do NOT install `@fontsource/*` packages — this environment's npm
+> supply-chain guard blocks them. The design uses the system-font fallbacks
+> already declared in the tokens (`'Century Gothic', system-ui` for display,
+> system sans for body). Self-hosting real Poppins/Nunito woff2 files can be a
+> later, separate task if desired.
 
 - [ ] **Step 3: Write a smoke test**
 
@@ -1370,12 +1375,8 @@ Note: When building the `RatingChart` later (Task 16), consult the `dataviz` ski
 Replace `src/app.css` with:
 
 ```css
-@import '@fontsource/poppins/600.css';
-@import '@fontsource/poppins/700.css';
-@import '@fontsource/poppins/800.css';
-@import '@fontsource/nunito/400.css';
-@import '@fontsource/nunito/700.css';
-@import '@fontsource/nunito/800.css';
+/* Fonts come from the system-font fallback stacks in --display / --body below.
+   No @fontsource imports — the npm supply-chain guard blocks those packages. */
 
 :root {
 	/* ground + surfaces */
