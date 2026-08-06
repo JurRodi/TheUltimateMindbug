@@ -77,3 +77,22 @@ describe('computeTrack', () => {
 		expect(games[0].id).toBe(2);
 	});
 });
+
+import { computeRatings } from './engine';
+
+describe('computeRatings', () => {
+	it('computes three independent tracks filtered by format', () => {
+		const games: GameInput[] = [
+			{ id: 1, playedAt: '2026-01-01T10:00:00Z', format: '2v2', winnerSide: 'A', sideA: [1, 2], sideB: [3, 4] },
+			{ id: 2, playedAt: '2026-01-02T10:00:00Z', format: '3v3', winnerSide: 'A', sideA: [1, 2, 5], sideB: [3, 4, 6] }
+		];
+		const r = computeRatings(games);
+		// total sees both games; 2v2 sees only game 1; 3v3 sees only game 2
+		expect(Object.keys(r['2v2'].current).sort()).toEqual(['1', '2', '3', '4']);
+		expect(Object.keys(r['3v3'].current).sort()).toEqual(['1', '2', '3', '4', '5', '6']);
+		// player 5 only exists in 3v3 and total, never in 2v2
+		expect(r['2v2'].current[5]).toBeUndefined();
+		expect(r['3v3'].current[5]).toBeGreaterThan(1000);
+		expect(r.total.current[5]).toBeGreaterThan(1000);
+	});
+});

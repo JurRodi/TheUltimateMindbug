@@ -69,3 +69,17 @@ export function computeTrack(games: GameInput[], config: RatingConfig = DEFAULT_
 
 	return { current, history };
 }
+
+export interface RatingResult {
+	total: TrackResult;
+	'2v2': TrackResult;
+	'3v3': TrackResult;
+}
+
+export function computeRatings(games: GameInput[], config: RatingConfig = DEFAULT_CONFIG): RatingResult {
+	return {
+		total: computeTrack(games, config),
+		'2v2': computeTrack(games.filter((g) => g.format === '2v2'), config),
+		'3v3': computeTrack(games.filter((g) => g.format === '3v3'), config)
+	};
+}
