@@ -1,0 +1,222 @@
+<title>Mindbug — Dark · Creature Tiles</title>
+<style>
+	* { box-sizing: border-box; }
+	:root {
+		--mat:#0b4744; --mat-2:#0e5a56; --mat-top:#0d534e;
+		--card:#f3e6c6; --card-hi:#f8efd6; --edge:#c99a3f; --gold:#e0a52a; --gold-2:#f4d271;
+		--ink:#2a2014; --muted:#7c6a48; --line-card:#ddc99c;
+		--teal:#17b3a6; --coral:#ef6a4d; --pink:#d24f96;
+		--up:#0f8f6a; --down:#d64a37;
+		--onmat:#ecfaf7; --onmat-muted:#9fd0ca;
+		--display:'Poppins','Century Gothic','Futura',ui-rounded,system-ui,sans-serif;
+		--body:ui-rounded,'Nunito','Segoe UI',system-ui,sans-serif;
+		--gold-grad:linear-gradient(160deg,#ecc25a,#dfa528);
+	}
+	body { margin: 0; background: #052925; color: var(--onmat); font-family: var(--body); -webkit-font-smoothing: antialiased; }
+	.wrap { max-width: 1060px; margin: 0 auto; padding: 3rem 1.25rem 5rem; }
+
+	.lead { text-align: center; margin-bottom: 2.2rem; }
+	.lead .tag { display: inline-block; padding: 0.32rem 0.9rem; border-radius: 999px; background: rgba(255,255,255,0.08); color: var(--onmat-muted); font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 800; }
+	.lead h1 { font-family: var(--display); font-size: clamp(1.9rem, 5.2vw, 3rem); margin: 0.9rem 0 0.5rem; font-weight: 800; letter-spacing: -0.01em; text-wrap: balance; color: #fff; }
+	.lead h1 .g { background: linear-gradient(120deg,var(--gold-2),var(--coral)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+	.lead p { color: var(--onmat-muted); max-width: 56ch; margin: 0 auto; line-height: 1.55; }
+
+	.dhead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem 1rem; margin-bottom: 0.35rem; }
+	.dhead .num { font-size: 0.8rem; font-weight: 800; color: var(--gold-2); letter-spacing: 0.1em; }
+	.dhead h2 { font-family: var(--display); font-size: 1.5rem; margin: 0; font-weight: 800; color: #fff; }
+	.dhead .pitch { color: var(--onmat-muted); font-size: 0.9rem; }
+	.swatches { display: flex; gap: 6px; margin: 0.5rem 0 1.1rem; }
+	.swatches i { width: 26px; height: 26px; border-radius: 7px; display: inline-block; border: 1px solid rgba(255,255,255,0.14); }
+
+	.scroller { overflow-x: auto; padding-bottom: 6px; }
+	.stage { display: grid; grid-template-columns: minmax(600px, 1fr) 226px; gap: 1.1rem; min-width: 860px; align-items: start; }
+
+	.browser { border-radius: 16px; overflow: hidden; box-shadow: 0 24px 60px rgba(0,0,0,0.5); background: #041f1e; }
+	.bbar { display: flex; align-items: center; gap: 8px; padding: 9px 12px; background: #041f1e; }
+	.bbar i { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
+	.bbar .url { margin-left: 10px; font-size: 0.72rem; padding: 3px 12px; border-radius: 7px; background: #0b4744; color: var(--onmat-muted); font-weight: 700; }
+
+	.app { display: grid; grid-template-columns: 182px 1fr; min-height: 512px; background: radial-gradient(120% 90% at 50% 0%, var(--mat-top) 0%, var(--mat) 62%); }
+	.rail { padding: 1.2rem 0.95rem; display: flex; flex-direction: column; gap: 0.35rem; background: rgba(0,0,0,0.24); border-right: 1px solid rgba(0,0,0,0.3); }
+	.brand { display: flex; align-items: center; gap: 0.5rem; font-weight: 800; font-size: 1.1rem; margin-bottom: 1.1rem; color: var(--gold-2); font-family: var(--display); }
+	.brand .bug { font-size: 1.35rem; }
+	.rail a { display: flex; align-items: center; gap: 0.55rem; padding: 0.58rem 0.7rem; border-radius: 11px; text-decoration: none; font-weight: 700; font-size: 0.9rem; color: #cfeae6; }
+	.rail a.on { background: var(--gold-grad); color: #2a2014; }
+	.rail .lock { margin-top: auto; font-size: 0.72rem; padding: 0.55rem 0.7rem; border-radius: 11px; background: rgba(0,0,0,0.28); color: #cfeae6; }
+
+	.main { padding: 1.3rem 1.4rem; display: flex; flex-direction: column; gap: 0.95rem; min-width: 0; }
+	.mtop { display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; flex-wrap: wrap; }
+	.mtop h3 { margin: 0; font-size: 1.4rem; font-weight: 800; font-family: var(--display); color: var(--gold-2); }
+	.controls { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+	.tabset, .segset { display: flex; gap: 3px; border-radius: 999px; padding: 3px; background: rgba(0,0,0,0.26); }
+	.tabset b, .segset b { font-size: 0.72rem; font-weight: 800; padding: 0.34rem 0.72rem; border-radius: 999px; color: #cfeae6; }
+	.tabset b.on, .segset b.on { background: var(--gold-grad); color: #2a2014; }
+
+	/* ---- podium (top 3, stepped by position) ---- */
+	.podium { display: grid; grid-template-columns: 1fr 1.18fr 1fr; gap: 0.6rem; align-items: end; margin-bottom: 0.3rem; }
+	.bigcard { background: var(--card); border: 2px solid var(--edge); border-radius: 14px; padding: 8px; display: flex; flex-direction: column; align-items: center; gap: 0.22rem; box-shadow: 0 5px 0 rgba(0,0,0,0.28); text-align: center; }
+	.bigcard .medal { font-size: 1.3rem; line-height: 1; }
+	.bigcard .bart { width: 100%; border-radius: 9px; display: grid; place-items: center; background: linear-gradient(155deg,#31b7a9,#0e7a74); border: 1.5px solid var(--edge); }
+	.bigcard .bn { font-weight: 800; color: var(--ink); font-size: 0.9rem; }
+	.bigcard .bp { font-family: var(--display); font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums; line-height: 1.05; }
+	.bigcard .bp small { display: block; font-size: 0.5rem; letter-spacing: 0.1em; color: var(--muted); font-weight: 800; }
+	.bigcard .chips { justify-content: center; }
+	.bigcard.p1 { border-color: var(--gold); transform: translateY(-10px); }
+	.bigcard.p1 .bart { height: 92px; font-size: 2.4rem; background: linear-gradient(155deg,#edca66,#cf9a2c); }
+	.bigcard.p1 .bp { font-size: 1.6rem; color: #7a4d06; }
+	.bigcard.p2 .bart { height: 78px; font-size: 2rem; }
+	.bigcard.p2 .bp { font-size: 1.35rem; }
+	.bigcard.p3 .bart { height: 64px; font-size: 1.7rem; }
+	.bigcard.p3 .bp { font-size: 1.2rem; }
+
+	/* ---- creature-card tile (full width under the podium) ---- */
+	.tilegrid { display: grid; grid-template-columns: 1fr; gap: 0.6rem; }
+	.tile {
+		background: var(--card); border: 2px solid var(--edge); border-radius: 14px; padding: 7px;
+		display: flex; align-items: center; gap: 0.6rem; box-shadow: 0 5px 0 rgba(0,0,0,0.28); position: relative;
+	}
+	.tile.king { border-color: var(--gold); }
+	.rankchip {
+		position: absolute; top: -8px; left: -8px; min-width: 22px; height: 22px; padding: 0 5px;
+		border-radius: 999px; background: var(--edge); color: #2a1c06; font-size: 0.66rem; font-weight: 800;
+		display: grid; place-items: center; box-shadow: 0 2px 0 rgba(0,0,0,0.25);
+	}
+	.tile.king .rankchip { background: var(--gold); }
+	.art { width: 48px; height: 58px; border-radius: 9px; flex: none; display: grid; place-items: center; font-size: 1.7rem; background: linear-gradient(155deg,#31b7a9,#0e7a74); border: 1.5px solid var(--edge); }
+	.tile.king .art { background: linear-gradient(155deg,#edca66,#cf9a2c); }
+	.body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.28rem; }
+	.tname { font-weight: 800; color: var(--ink); font-size: 0.95rem; }
+	.chips { display: flex; flex-wrap: wrap; gap: 0.28rem; }
+	.chip { font-size: 0.63rem; font-weight: 800; padding: 0.1rem 0.4rem; border-radius: 999px; background: #e7d6ad; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+	.chip.w { background: #d7efe0; color: var(--up); }
+	.chip.l { background: #f6ddd4; color: var(--down); }
+	.chip.none { opacity: 0.75; }
+	.power { text-align: center; min-width: 3.2rem; }
+	.power b { font-family: var(--display); font-weight: 800; font-size: 1.4rem; color: var(--ink); font-variant-numeric: tabular-nums; display: block; line-height: 1; }
+	.tile.king .power b { color: #7a4d06; }
+	.power small { font-size: 0.52rem; letter-spacing: 0.1em; color: var(--muted); font-weight: 800; }
+
+	.aside { display: flex; flex-direction: column; gap: 0.7rem; }
+	.info { border-radius: 16px; padding: 1rem; background: rgba(0,0,0,0.22); border: 1px solid rgba(255,255,255,0.08); }
+	.info.grad { background: var(--gold-grad); border: 0; color: #3a2b06; }
+	.info h4 { margin: 0 0 0.5rem; font-size: 0.7rem; letter-spacing: 0.07em; text-transform: uppercase; font-weight: 800; color: var(--onmat-muted); }
+	.info.grad h4 { color: rgba(58,43,6,0.7); }
+	.info .big { font-weight: 800; font-size: 1.7rem; font-variant-numeric: tabular-nums; font-family: var(--display); }
+	.info .row { display: flex; justify-content: space-between; font-size: 0.82rem; padding: 0.28rem 0; }
+	.info:not(.grad) .row + .row { border-top: 1px solid rgba(255,255,255,0.09); }
+	.phone-tag { text-align: center; font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: var(--onmat-muted); margin-top: 0.4rem; }
+	.legend { font-size: 0.72rem; color: var(--onmat-muted); line-height: 1.7; }
+	.legend .chip { margin-right: 0.2rem; }
+
+	/* ---- mobiles ---- */
+	.mobile-row { display: flex; gap: 1rem; margin-top: 1.3rem; align-items: flex-start; flex-wrap: wrap; }
+	.phone { width: 228px; border-radius: 32px; padding: 9px; background: #041f1e; box-shadow: 0 18px 46px rgba(0,0,0,0.5); flex: none; }
+	.pscreen { border-radius: 24px; overflow: hidden; display: flex; flex-direction: column; min-height: 470px; background: radial-gradient(120% 70% at 50% 0%, var(--mat-top) 0%, var(--mat) 60%); }
+	.pcontent { padding: 0.9rem 0.75rem; display: flex; flex-direction: column; gap: 0.55rem; flex: 1; }
+	.pnav { display: flex; justify-content: space-around; padding: 0.5rem 0 0.65rem; background: rgba(0,0,0,0.3); }
+	.pnav a { font-size: 0.64rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; text-decoration: none; padding: 0.28rem 0.5rem; border-radius: 9px; color: #cfeae6; }
+	.pnav a.on { color: #2a2014; background: var(--gold-grad); }
+	.ph { font-weight: 800; font-size: 1.05rem; margin: 0.1rem 0; font-family: var(--display); color: var(--gold-2); }
+	.mtabs { display: flex; gap: 3px; border-radius: 999px; padding: 3px; background: rgba(0,0,0,0.28); }
+	.mtabs b { flex: 1; text-align: center; font-size: 0.66rem; font-weight: 800; padding: 0.36rem; border-radius: 999px; color: #cfeae6; }
+	.mtabs b.on { background: var(--gold-grad); color: #2a2014; }
+
+	/* log screen (dark) */
+	.seg2 { display: flex; gap: 3px; background: rgba(0,0,0,0.28); border-radius: 999px; padding: 3px; width: fit-content; }
+	.seg2 b { font-size: 0.7rem; font-weight: 800; padding: 0.34rem 0.9rem; border-radius: 999px; color: #cfeae6; }
+	.seg2 b.on { background: var(--gold-grad); color: #2a2014; }
+	.sides { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+	.side { border: 2px solid var(--edge); border-radius: 14px; padding: 0.5rem; display: flex; flex-direction: column; gap: 0.35rem; background: var(--card); }
+	.side.win { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(23,179,166,0.35); }
+	.side .lg { font-size: 0.62rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+	.slot { background: #fbf4e2; border: 1.5px solid var(--line-card); border-radius: 9px; padding: 0.38rem 0.5rem; font-size: 0.74rem; color: var(--ink); display: flex; justify-content: space-between; align-items: center; }
+	.wonb { border: 0; border-radius: 9px; padding: 0.34rem; font-weight: 800; font-size: 0.64rem; text-transform: uppercase; background: #e7d6ad; color: var(--muted); }
+	.wonb.on { background: var(--teal); color: #05312d; }
+	.savebtn { border: 0; border-radius: 12px; padding: 0.65rem; font-family: var(--display); font-weight: 800; font-size: 0.85rem; background: var(--coral); color: #fff; text-align: center; }
+	.hint { color: var(--onmat-muted); font-size: 0.66rem; text-align: center; }
+
+	.mnote { flex: 1; min-width: 220px; color: var(--onmat-muted); font-size: 0.92rem; line-height: 1.6; align-self: center; }
+	.mnote b { color: #fff; }
+
+	@media (max-width: 720px) { .stage { grid-template-columns: 1fr; min-width: 680px; } }
+</style>
+
+<div class="wrap">
+	<div class="lead">
+		<span class="tag">Dark · Creature tiles · desktop + mobile</span>
+		<h1>The Ultimate <span class="g">Mindbug</span> 🐛</h1>
+		<p>Dark teal game-mat, the board as collectible creature-card tiles instead of a table. Each tile carries every stat the table did — rank, creature, rating, games, win%, and streak (win / loss / none).</p>
+	</div>
+
+	<div class="dhead"><span class="num">08</span><h2>Dark · Creature Tiles</h2><span class="pitch">Teal mat · cream cards · gold champion · tiles, not a table.</span></div>
+	<div class="swatches"><i style="background:#0b4744"></i><i style="background:#f3e6c6"></i><i style="background:#e0a52a"></i><i style="background:#17b3a6"></i><i style="background:#ef6a4d"></i><i style="background:#c99a3f"></i></div>
+
+	<div class="scroller">
+		<div class="stage">
+			<div class="browser">
+				<div class="bbar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><span class="url">mindbug.vercel.app</span></div>
+				<div class="app">
+					<div class="rail">
+						<div class="brand"><span class="bug">🐛</span> Mindbug</div>
+						<a class="on">📊 Board</a><a>👾 Players</a><a>➕ Log</a>
+						<div class="lock">🔒 Unlock to log</div>
+					</div>
+					<div class="main">
+						<div class="mtop">
+							<div class="tabset"><b class="on">Players</b><b>Teams</b></div>
+							<div class="segset"><b class="on">Total</b><b>2v2</b><b>3v3</b></div>
+						</div>
+						<div class="podium">
+							<div class="bigcard p2"><span class="medal">🥈</span><div class="bart">🦈</div><div class="bn">Milan</div><div class="bp">1156<small>RATING</small></div><div class="chips"><span class="chip">39 GP</span><span class="chip">59%</span><span class="chip w">W2</span></div></div>
+							<div class="bigcard p1"><span class="medal">🥇</span><div class="bart">🦍</div><div class="bn">Fenna</div><div class="bp">1187<small>RATING</small></div><div class="chips"><span class="chip">42 GP</span><span class="chip">64%</span><span class="chip w">W5</span></div></div>
+							<div class="bigcard p3"><span class="medal">🥉</span><div class="bart">🕷️</div><div class="bn">Sanne</div><div class="bp">1121<small>RATING</small></div><div class="chips"><span class="chip">45 GP</span><span class="chip">56%</span><span class="chip none">–</span></div></div>
+						</div>
+						<div class="tilegrid">
+							<div class="tile"><span class="rankchip">#4</span><div class="art">🐸</div><div class="body"><div class="tname">Joris</div><div class="chips"><span class="chip">40 GP</span><span class="chip">52%</span><span class="chip l">L1</span></div></div><div class="power"><b>1098</b><small>RATING</small></div></div>
+							<div class="tile"><span class="rankchip">#5</span><div class="art">🦎</div><div class="body"><div class="tname">Bram</div><div class="chips"><span class="chip">33 GP</span><span class="chip">45%</span><span class="chip none">–</span></div></div><div class="power"><b>1042</b><small>RATING</small></div></div>
+							<div class="tile"><span class="rankchip">#6</span><div class="art">🐙</div><div class="body"><div class="tname">Noor</div><div class="chips"><span class="chip">28 GP</span><span class="chip">43%</span><span class="chip l">L3</span></div></div><div class="power"><b>1009</b><small>RATING</small></div></div>
+							<div class="tile"><span class="rankchip">#7</span><div class="art">🦇</div><div class="body"><div class="tname">Tess</div><div class="chips"><span class="chip">21 GP</span><span class="chip">38%</span><span class="chip w">W1</span></div></div><div class="power"><b>994</b><small>RATING</small></div></div>
+							<div class="tile"><span class="rankchip">#8</span><div class="art">🦂</div><div class="body"><div class="tname">Rick</div><div class="chips"><span class="chip">0 GP</span><span class="chip">—</span><span class="chip none">–</span></div></div><div class="power"><b>1000</b><small>UNRATED</small></div></div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="aside">
+				<div class="info grad"><h4>Champion</h4><div class="big">Fenna</div><div class="row"><span>rating</span><span>1187</span></div><div class="row"><span>streak</span><span>W5 🔥</span></div></div>
+				<div class="info"><h4>This week</h4><div class="big">17</div><div class="row"><span>games played</span><span>▲ 4</span></div><div class="row"><span>biggest climb</span><span>Tess +38</span></div></div>
+				<div class="info"><h4>Tile legend</h4><div class="legend"><span class="chip">40 GP</span> games · <span class="chip">64%</span> win rate · <span class="chip w">W5</span> win streak · <span class="chip l">L3</span> loss streak · <span class="chip none">–</span> none · <b style="color:#fff">1187</b> rating</div></div>
+				<div class="phone-tag">→ mobile below</div>
+			</div>
+		</div>
+	</div>
+
+	<div class="mobile-row">
+		<div class="phone"><div class="pscreen">
+			<div class="pcontent">
+				<div class="mtabs"><b class="on">Players</b><b>Teams</b></div>
+				<div class="tile king"><span class="rankchip">#1</span><div class="art">🦍</div><div class="body"><div class="tname">Fenna</div><div class="chips"><span class="chip">42 GP</span><span class="chip">64%</span><span class="chip w">W5</span></div></div><div class="power"><b>1187</b><small>RTG</small></div></div>
+				<div class="tile"><span class="rankchip">#2</span><div class="art">🦈</div><div class="body"><div class="tname">Milan</div><div class="chips"><span class="chip">39 GP</span><span class="chip">59%</span><span class="chip w">W2</span></div></div><div class="power"><b>1156</b><small>RTG</small></div></div>
+				<div class="tile"><span class="rankchip">#3</span><div class="art">🕷️</div><div class="body"><div class="tname">Sanne</div><div class="chips"><span class="chip">45 GP</span><span class="chip">56%</span><span class="chip none">–</span></div></div><div class="power"><b>1121</b><small>RTG</small></div></div>
+				<div class="tile"><span class="rankchip">#4</span><div class="art">🐸</div><div class="body"><div class="tname">Joris</div><div class="chips"><span class="chip">40 GP</span><span class="chip">52%</span><span class="chip l">L1</span></div></div><div class="power"><b>1098</b><small>RTG</small></div></div>
+			</div>
+			<div class="pnav"><a class="on">Board</a><a>Players</a><a>Log</a></div>
+		</div></div>
+
+		<div class="phone"><div class="pscreen">
+			<div class="pcontent">
+				<div class="ph">Log a game</div>
+				<div class="seg2"><b class="on">2v2</b><b>3v3</b></div>
+				<div class="sides">
+					<div class="side win"><span class="lg">Side A</span><div class="slot">🦍 Fenna <span>▾</span></div><div class="slot">🦈 Milan <span>▾</span></div><button class="wonb on">A won ✓</button></div>
+					<div class="side"><span class="lg">Side B</span><div class="slot">🕷️ Sanne <span>▾</span></div><div class="slot">🐸 Joris <span>▾</span></div><button class="wonb">B won</button></div>
+				</div>
+				<div class="slot">📅 Today · 6 Aug 2026</div>
+				<button class="savebtn">Save game</button>
+				<div class="hint">Winning side glows teal · shared Elo delta applied to both</div>
+			</div>
+			<div class="pnav"><a>Board</a><a>Players</a><a class="on">Log</a></div>
+		</div></div>
+
+		<p class="mnote"><b>Dark · Creature Tiles.</b> The board is a dark teal game-mat. The top 3 sit on a stepped podium of creature cards — #1 largest and gold, #2 and #3 progressively smaller — then everyone else is a full-width creature-card tile below. Each tile carries the full stat line: rank badge, creature avatar, name, chips for games / win% / streak (green win-streak, red loss-streak, "–" for none), and the big rating with its label (or "UNRATED" for a player with no games yet, like Rick #8).</p>
+	</div>
+</div>

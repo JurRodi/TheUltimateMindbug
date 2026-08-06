@@ -114,10 +114,20 @@ Direction (to be refined during implementation):
 - Fully **responsive / mobile-first**, since games are often logged on a phone
   at the table.
 
-The concrete visual system (exact palette, type, components) will be designed
-during implementation using the frontend design workflow; this section fixes the
-*intent* so the build aims at the right target. No official Mindbug brand assets
-or logos are assumed — the look is an original homage, not a reproduction.
+**Locked direction (chosen 2026-08-06): "Dark · Creature Tiles."** A dark teal
+game-mat background, cream creature-card surfaces, gold for the champion (#1),
+coral for actions; geometric display type (Poppins, standing in for Mindbug's
+Futura-style wordmark) + Nunito body; subtle gradients; uniform card borders.
+The board is a stepped top-3 podium over full-width creature-card tiles; each
+player has an emoji creature avatar (player-chosen, with a deterministic
+fallback). The pixel reference lives at
+`docs/superpowers/design/mindbug-ui-reference.html` and the design tokens are
+specified in the implementation plan (Task 12).
+
+For a **personal** friend-group tool, the official Mindbug card art / logo may be
+dropped into `static/` and used in place of the emoji placeholders (the app has
+no technical barrier); this is the user's call. The mockups themselves use only
+original placeholders, not reproductions.
 
 ## Features & pages
 

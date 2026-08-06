@@ -57,14 +57,16 @@ src/
         queries.ts                     # getPlayers, addPlayer, setPlayerActive, getPlayer, insertGame, getAllGames
         queries.test.ts                # pglite integration tests
         test-db.ts                     # pglite test-db factory (test helper)
+    creatures.ts                       # emoji creature avatars + deterministic fallback
     components/
-      Nav.svelte
+      Nav.svelte                       # responsive: bottom bar (mobile) / left rail (desktop)
       ViewTabs.svelte                  # Players/Teams toggle (?view)
       FilterBar.svelte
-      RankCard.svelte
+      CreatureTile.svelte              # full-width player/team creature card
+      Podium.svelte                    # stepped top-3 creature cards
       RatingChart.svelte
   routes/
-    +layout.svelte                     # app shell + Nav
+    +layout.svelte                     # responsive shell (rail + content grid on desktop)
     +page.svelte                       # leaderboard: Players + Teams tabs (?view=players|teams)
     +page.server.ts                    # loads both player ranking and team records
     login/+page.svelte
@@ -109,7 +111,7 @@ Choose, when prompted: template **SvelteKit minimal**; type checking **TypeScrip
 ```bash
 npm install drizzle-orm @neondatabase/serverless
 npm install -D drizzle-kit @electric-sql/pglite @sveltejs/adapter-vercel
-npm install @fontsource/bungee @fontsource/nunito
+npm install @fontsource/poppins @fontsource/nunito
 ```
 
 - [ ] **Step 3: Write a smoke test**
@@ -194,6 +196,8 @@ export interface GameInput {
 export interface Player {
 	id: number;
 	name: string;
+	/** A single emoji creature avatar, or null to use a deterministic fallback. */
+	avatar: string | null;
 	isActive: boolean;
 	/** ISO-8601 timestamp string. */
 	createdAt: string;
@@ -840,6 +844,7 @@ export const sideEnum = pgEnum('side', ['A', 'B']);
 export const players = pgTable('players', {
 	id: serial('id').primaryKey(),
 	name: text('name').notNull().unique(),
+	avatar: text('avatar'),
 	isActive: boolean('is_active').notNull().default(true),
 	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
 });
@@ -1041,7 +1046,7 @@ git commit -m "feat: add pure DB-row-to-GameInput shaper"
 - Produces (all take the Drizzle db as first arg so tests can inject a PGlite instance; type it as `PgDatabase<any, typeof schema>` from `drizzle-orm/pg-core`):
   - `getPlayers(db): Promise<Player[]>` — ordered by name.
   - `getPlayer(db, id: number): Promise<Player | null>`
-  - `addPlayer(db, name: string): Promise<Player>`
+  - `addPlayer(db, name: string, avatar?: string | null): Promise<Player>`
   - `setPlayerActive(db, id: number, isActive: boolean): Promise<void>`
   - `insertGame(db, input: { playedAt: string; format: Format; winnerSide: Side; sideA: number[]; sideB: number[] }): Promise<number>` — inserts the game and its participants in one transaction; returns the new game id.
   - `getAllGames(db): Promise<GameInput[]>` — reads all games + participants, returns via `toGameInputs`.
@@ -1156,6 +1161,7 @@ function toPlayer(row: typeof players.$inferSelect): Player {
 	return {
 		id: row.id,
 		name: row.name,
+		avatar: row.avatar,
 		isActive: row.isActive,
 		createdAt: row.createdAt.toISOString()
 	};
@@ -1171,8 +1177,11 @@ export async function getPlayer(db: DB, id: number): Promise<Player | null> {
 	return rows[0] ? toPlayer(rows[0]) : null;
 }
 
-export async function addPlayer(db: DB, name: string): Promise<Player> {
-	const rows = await db.insert(players).values({ name }).returning();
+export async function addPlayer(db: DB, name: string, avatar?: string | null): Promise<Player> {
+	const rows = await db
+		.insert(players)
+		.values({ name, avatar: avatar ?? null })
+		.returning();
 	return toPlayer(rows[0]);
 }
 
@@ -1348,35 +1357,67 @@ git commit -m "feat: add shared-password auth with signed cookie"
 - Create: `src/lib/components/Nav.svelte`
 
 **Interfaces:**
-- Produces: global CSS custom properties (design tokens) usable by all components; a `Nav` component; the app shell layout. No tests (visual/structural); verified by build + dev render.
+- Produces: the finalized design system as global CSS custom properties + component classes (`.card`, `.tile`, `.rankchip`, `.art`, `.chip`, `.power`, `.podium`, `.bigcard`, `.btn`, `.pill`, tab/segment controls, form controls, nav); a responsive `Nav` (bottom bar on mobile, left rail on desktop); the two-column app shell. No tests (visual/structural); verified by build + dev render.
 
-Note: When building the `RatingChart` later (Task 16), consult the `dataviz` skill before writing chart code.
+**Design source of truth:** `docs/superpowers/design/mindbug-ui-reference.html` — the approved mockup. It shows the exact palette, the stepped top-3 podium, the full-width creature-card tiles with their chips/states, and both the desktop (nav rail · podium · tiles) and mobile layouts. Match it. The CSS below is ported from it; if anything here is ambiguous, the reference wins.
 
-- [ ] **Step 1: Import offline fonts and tokens in `app.css`**
+**Chosen direction:** "Dark · Creature Tiles" — a dark teal game-mat, cream creature-card surfaces, gold for the champion, coral for actions; geometric display type (Poppins, standing in for the Futura-style Mindbug wordmark) + Nunito body. Gradients are deliberately subtle; all card borders are uniform (no oversized winner lip).
+
+Note: When building the `RatingChart` later (Task 16), consult the `dataviz` skill before writing chart code — use the teal/coral/gold accents from these tokens for its series.
+
+- [ ] **Step 1: Import offline fonts and write the design system in `app.css`**
 
 Replace `src/app.css` with:
 
 ```css
-@import '@fontsource/bungee/400.css';
+@import '@fontsource/poppins/600.css';
+@import '@fontsource/poppins/700.css';
+@import '@fontsource/poppins/800.css';
 @import '@fontsource/nunito/400.css';
 @import '@fontsource/nunito/700.css';
 @import '@fontsource/nunito/800.css';
 
 :root {
-	--bg: #180d2e;
-	--surface: #241546;
-	--surface-2: #2f1c5c;
-	--ink: #f6f0ff;
-	--muted: #b9a7e0;
-	--accent: #34e0a1; /* acid green */
-	--accent-2: #ff2e88; /* hot magenta */
-	--accent-3: #ffd23f; /* electric yellow */
-	--danger: #ff5c5c;
-	--radius: 18px;
-	--radius-sm: 12px;
-	--shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
-	--display: 'Bungee', system-ui, sans-serif;
+	/* ground + surfaces */
+	--mat: #0b4744;
+	--mat-2: #0e5a56;
+	--mat-top: #0d534e;
+	--card: #f3e6c6;
+	--card-hi: #f8efd6;
+	--edge: #c99a3f;
+	--gold: #e0a52a;
+	--gold-2: #f4d271;
+	--ink: #2a2014;
+	--muted: #7c6a48;
+	--line-card: #ddc99c;
+	/* accents */
+	--teal: #17b3a6;
+	--coral: #ef6a4d;
+	--pink: #d24f96;
+	--up: #0f8f6a;
+	--down: #d64a37;
+	/* text on the dark mat */
+	--onmat: #ecfaf7;
+	--onmat-muted: #9fd0ca;
+	/* misc */
+	--gold-grad: linear-gradient(160deg, #ecc25a, #dfa528);
+	--radius: 16px;
+	--radius-sm: 11px;
+	--display: 'Poppins', 'Century Gothic', system-ui, sans-serif;
 	--body: 'Nunito', system-ui, sans-serif;
+
+	/* Semantic aliases so the form/profile components (Tasks 13, 15–17) that were
+	   authored against these names render consistently on the cream-card theme.
+	   Everything inside a `.card` is dark-on-cream; these map the old names onto
+	   the new palette. */
+	--surface: var(--card-hi); /* raised cream sub-panel */
+	--surface-2: #e7d6ad; /* tan control/track */
+	--bg: #fbf4e2; /* input field background (light cream) */
+	--accent: var(--teal); /* primary accent */
+	--accent-2: var(--pink);
+	--accent-3: var(--gold);
+	--danger: var(--down);
+	--shadow: 0 5px 0 rgba(0, 0, 0, 0.28);
 }
 
 * {
@@ -1386,64 +1427,144 @@ Replace `src/app.css` with:
 html,
 body {
 	margin: 0;
-	background: var(--bg);
-	color: var(--ink);
+	background: radial-gradient(120% 80% at 50% 0%, var(--mat-top) 0%, var(--mat) 60%) fixed;
+	color: var(--onmat);
 	font-family: var(--body);
+	-webkit-font-smoothing: antialiased;
+	min-height: 100vh;
 }
 
 h1,
 h2,
 h3 {
 	font-family: var(--display);
-	letter-spacing: 0.5px;
+	letter-spacing: 0.01em;
 	line-height: 1.1;
+	color: var(--gold-2);
 }
 
 a {
-	color: var(--accent);
+	color: var(--teal);
 }
 
+/* cream card surface */
 .card {
-	background: var(--surface);
+	background: var(--card);
+	color: var(--ink);
+	border: 2px solid var(--edge);
 	border-radius: var(--radius);
-	box-shadow: var(--shadow);
-	padding: 1rem 1.15rem;
+	box-shadow: 0 5px 0 rgba(0, 0, 0, 0.28);
+	padding: 0.9rem 1rem;
 }
 
+/* coral action button */
 .btn {
 	font-family: var(--display);
 	border: none;
 	border-radius: var(--radius-sm);
 	padding: 0.7rem 1.1rem;
-	background: var(--accent);
-	color: #06231a;
+	background: var(--coral);
+	color: #fff;
 	cursor: pointer;
+	font-weight: 800;
 	font-size: 0.95rem;
 }
 .btn.secondary {
-	background: var(--surface-2);
-	color: var(--ink);
+	background: #e7d6ad;
+	color: var(--muted);
 }
 .btn:disabled {
 	opacity: 0.5;
 	cursor: not-allowed;
 }
 
+/* stat chip (on cream cards) */
+.chip {
+	font-size: 0.68rem;
+	font-weight: 800;
+	padding: 0.12rem 0.45rem;
+	border-radius: 999px;
+	background: #e7d6ad;
+	color: var(--muted);
+	white-space: nowrap;
+	font-variant-numeric: tabular-nums;
+}
+.chip.w {
+	background: #d7efe0;
+	color: var(--up);
+}
+.chip.l {
+	background: #f6ddd4;
+	color: var(--down);
+}
+.chip.none {
+	opacity: 0.75;
+}
+
+/* pill (on the dark mat) */
 .pill {
 	display: inline-flex;
 	align-items: center;
 	gap: 0.35rem;
-	padding: 0.25rem 0.6rem;
+	padding: 0.2rem 0.6rem;
 	border-radius: 999px;
-	background: var(--surface-2);
-	color: var(--muted);
-	font-size: 0.8rem;
+	background: rgba(0, 0, 0, 0.24);
+	color: var(--onmat-muted);
+	font-size: 0.78rem;
+	font-variant-numeric: tabular-nums;
 }
 
+/* tab + segment controls (Players/Teams, Total/2v2/3v3) */
+.tabset,
+.segset {
+	display: inline-flex;
+	gap: 3px;
+	border-radius: 999px;
+	padding: 3px;
+	background: rgba(0, 0, 0, 0.26);
+}
+.tabset button,
+.segset button {
+	font-family: var(--display);
+	font-size: 0.72rem;
+	font-weight: 800;
+	padding: 0.34rem 0.72rem;
+	border: 0;
+	border-radius: 999px;
+	background: transparent;
+	color: var(--onmat-muted);
+	cursor: pointer;
+}
+.tabset button.on,
+.segset button.on {
+	background: var(--gold-grad);
+	color: #2a2014;
+}
+
+/* creature avatar art frame */
+.art {
+	border-radius: 9px;
+	display: grid;
+	place-items: center;
+	background: linear-gradient(155deg, #31b7a9, #0e7a74);
+	border: 1.5px solid var(--edge);
+}
+.art.gold {
+	background: linear-gradient(155deg, #edca66, #cf9a2c);
+}
+
+/* content width + bottom padding for the fixed mobile nav */
 .wrap {
-	max-width: 720px;
+	width: 100%;
+	max-width: 760px;
 	margin: 0 auto;
-	padding: 1rem 1rem 6rem;
+	padding: 1.1rem 1rem 6rem;
+}
+
+@media (min-width: 820px) {
+	.wrap {
+		padding-bottom: 2rem;
+	}
 }
 ```
 
@@ -1453,29 +1574,32 @@ In `src/app.html`, inside `<head>`, add (keep the existing `%sveltekit.head%`):
 
 ```html
 <link rel="manifest" href="/manifest.webmanifest" />
-<meta name="theme-color" content="#180d2e" />
+<meta name="theme-color" content="#0b4744" />
 <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
 ```
 
-- [ ] **Step 3: Build the `Nav` component**
+- [ ] **Step 3: Build the responsive `Nav` component**
 
-Create `src/lib/components/Nav.svelte`:
+Create `src/lib/components/Nav.svelte` — a bottom bar on mobile, a left rail (with the brand) on desktop:
 
 ```svelte
 <script lang="ts">
 	import { page } from '$app/state';
 	const links = [
-		{ href: '/', label: 'Board' },
-		{ href: '/players', label: 'Players' },
-		{ href: '/log', label: 'Log' }
+		{ href: '/', label: 'Board', icon: '📊' },
+		{ href: '/players', label: 'Players', icon: '👾' },
+		{ href: '/log', label: 'Log', icon: '➕' }
 	];
 	const isActive = (href: string) =>
 		href === '/' ? page.url.pathname === '/' : page.url.pathname.startsWith(href);
 </script>
 
 <nav>
+	<div class="brand"><span class="bug">🐛</span> Mindbug</div>
 	{#each links as l}
-		<a href={l.href} class:active={isActive(l.href)}>{l.label}</a>
+		<a href={l.href} class:on={isActive(l.href)}>
+			<span class="icon">{l.icon}</span><span class="label">{l.label}</span>
+		</a>
 	{/each}
 </nav>
 
@@ -1485,30 +1609,86 @@ Create `src/lib/components/Nav.svelte`:
 		bottom: 0;
 		left: 0;
 		right: 0;
+		z-index: 10;
 		display: flex;
 		justify-content: space-around;
-		background: var(--surface);
-		border-top: 2px solid var(--surface-2);
+		align-items: center;
+		background: rgba(0, 0, 0, 0.32);
+		backdrop-filter: blur(8px);
+		border-top: 1px solid rgba(0, 0, 0, 0.3);
 		padding: 0.5rem 0 calc(0.5rem + env(safe-area-inset-bottom));
 	}
-	a {
-		font-family: var(--display);
-		font-size: 0.85rem;
-		color: var(--muted);
-		text-decoration: none;
-		padding: 0.4rem 0.7rem;
-		border-radius: var(--radius-sm);
+	.brand {
+		display: none;
 	}
-	a.active {
-		color: var(--accent);
-		background: var(--surface-2);
+	a {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.15rem;
+		font-family: var(--display);
+		font-weight: 800;
+		font-size: 0.66rem;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+		color: var(--onmat-muted);
+		text-decoration: none;
+		padding: 0.3rem 0.6rem;
+		border-radius: 10px;
+	}
+	a .icon {
+		font-size: 1.05rem;
+	}
+	a.on {
+		color: #2a2014;
+		background: var(--gold-grad);
+	}
+
+	@media (min-width: 820px) {
+		nav {
+			position: sticky;
+			top: 0;
+			bottom: auto;
+			height: 100vh;
+			flex-direction: column;
+			justify-content: flex-start;
+			align-items: stretch;
+			gap: 0.35rem;
+			width: 100%;
+			padding: 1.2rem 0.9rem;
+			border-top: 0;
+			border-right: 1px solid rgba(0, 0, 0, 0.3);
+			backdrop-filter: none;
+		}
+		.brand {
+			display: flex;
+			align-items: center;
+			gap: 0.5rem;
+			font-family: var(--display);
+			font-weight: 800;
+			font-size: 1.1rem;
+			color: var(--gold-2);
+			margin-bottom: 1rem;
+		}
+		.brand .bug {
+			font-size: 1.35rem;
+		}
+		a {
+			flex-direction: row;
+			justify-content: flex-start;
+			gap: 0.55rem;
+			font-size: 0.85rem;
+			text-transform: none;
+			letter-spacing: 0;
+			padding: 0.58rem 0.7rem;
+		}
 	}
 </style>
 ```
 
-- [ ] **Step 4: Build the shell layout**
+- [ ] **Step 4: Build the responsive shell layout**
 
-Replace `src/routes/+layout.svelte` with:
+Replace `src/routes/+layout.svelte` with a single-column shell on mobile that becomes a two-column (rail + content) grid on desktop:
 
 ```svelte
 <script lang="ts">
@@ -1517,22 +1697,42 @@ Replace `src/routes/+layout.svelte` with:
 	let { children } = $props();
 </script>
 
-<div class="wrap">
-	{@render children()}
+<div class="shell">
+	<Nav />
+	<main>
+		<div class="wrap">
+			{@render children()}
+		</div>
+	</main>
 </div>
-<Nav />
+
+<style>
+	.shell {
+		min-height: 100vh;
+	}
+	main {
+		min-width: 0;
+	}
+	@media (min-width: 820px) {
+		.shell {
+			display: grid;
+			grid-template-columns: 210px 1fr;
+			align-items: start;
+		}
+	}
+</style>
 ```
 
 - [ ] **Step 5: Verify build + dev render**
 
 Run: `npm run build`
-Expected: build succeeds. Optionally `npm run dev` and confirm the nav bar renders with the dark Mindbug theme.
+Expected: build succeeds. Then `npm run dev` and confirm: dark teal ground, a bottom nav on a narrow window that becomes a left rail past ~820px, and cream `.card` surfaces. Compare against `docs/superpowers/design/mindbug-ui-reference.html`.
 
 - [ ] **Step 6: Commit**
 
 ```bash
 git add src/app.html src/app.css src/routes/+layout.svelte src/lib/components/Nav.svelte
-git commit -m "feat: add Mindbug design tokens, app shell, and nav"
+git commit -m "feat: add Mindbug design system, responsive shell, and nav"
 ```
 
 ---
@@ -1629,7 +1829,7 @@ git commit -m "feat: add login page and password gate"
 ## Task 14: Leaderboard (home) — Players & Teams tabs
 
 **Files:**
-- Create: `src/routes/+page.server.ts`, `src/lib/components/FilterBar.svelte`, `src/lib/components/RankCard.svelte`, `src/lib/components/ViewTabs.svelte`
+- Create: `src/routes/+page.server.ts`, `src/lib/creatures.ts`, `src/lib/components/FilterBar.svelte`, `src/lib/components/ViewTabs.svelte`, `src/lib/components/CreatureTile.svelte`, `src/lib/components/Podium.svelte`
 - Replace: `src/routes/+page.svelte`
 
 **Interfaces:**
@@ -1637,9 +1837,10 @@ git commit -m "feat: add login page and password gate"
 - Produces: a single leaderboard `load` returning `{ view, format, range, rows, teams }` where:
   - `view` is `'players' | 'teams'` from `?view` (default `'players'`).
   - `rows` (player ranking) — each `{ player, rating, rated, games, wins, winRate, streak }`, sorted by rating desc (rated first).
-  - `teams` (line-up records) — each `{ playerIds, names, games, wins, losses, winRate }`, from `teamStats`, in that function's sort order.
+  - `teams` (line-up records) — each `{ playerIds, names, avatars, games, wins, losses, winRate }`, from `teamStats`, in that function's sort order.
   - Both are always computed from one `getAllGames` call; the page renders whichever `view` selects.
-  - `FilterBar` reads/writes `?format` and `?range`; `ViewTabs` reads/writes `?view`. `RankCard` renders one player row. Teams have no Elo — they rank by record.
+- `creatureFor(id, avatar?)` in `$lib/creatures.ts` returns the player's emoji avatar, or a deterministic fallback creature from a fixed list.
+- `FilterBar` reads/writes `?format` and `?range`; `ViewTabs` reads/writes `?view` (both in the page header). `CreatureTile` renders one full-width player card (rank badge · creature avatar · name · chips for games / win% / streak states · rating with its label, or `UNRATED` when the player has no games in this track). `Podium` renders the top 3 as stepped creature cards (#1 largest + gold). Teams have no Elo — they rank by record and render as `CreatureTile`s (rating slot shows the combined record).
 
 - [ ] **Step 1: Implement the leaderboard load (both views)**
 
@@ -1662,6 +1863,7 @@ export const load: PageServerLoad = async ({ url }) => {
 
 	const [players, games] = await Promise.all([getPlayers(db), getAllGames(db)]);
 	const nameById = new Map(players.map((p) => [p.id, p.name]));
+	const avatarById = new Map(players.map((p) => [p.id, p.avatar]));
 
 	// Player ranking. Note: allPlayerStats takes the Track string (`format`), NOT the TrackResult.
 	const track = computeRatings(games)[format];
@@ -1691,7 +1893,8 @@ export const load: PageServerLoad = async ({ url }) => {
 	// Team records (no Elo — ranked by record inside teamStats).
 	const teams = teamStats(games, { track: format, range, now }).map((t) => ({
 		...t,
-		names: t.playerIds.map((id) => nameById.get(id) ?? `#${id}`)
+		names: t.playerIds.map((id) => nameById.get(id) ?? `#${id}`),
+		avatars: t.playerIds.map((id) => avatarById.get(id) ?? null)
 	}));
 
 	return { view, format, range, rows, teams };
@@ -1819,78 +2022,269 @@ Create `src/lib/components/FilterBar.svelte`:
 </style>
 ```
 
-- [ ] **Step 4: Build `RankCard`**
+- [ ] **Step 4: Build the creatures helper + `CreatureTile`**
 
-Create `src/lib/components/RankCard.svelte`:
+Create `src/lib/creatures.ts`:
+
+```ts
+/** Fixed set of Mindbug-style hybrid creatures used as fallback avatars. */
+export const CREATURES = ['🦍', '🦈', '🕷️', '🐸', '🦎', '🐙', '🦇', '🦂', '🐺', '🦖', '🦉', '🐗'];
+
+/** A player's chosen emoji avatar, or a deterministic fallback from their id. */
+export function creatureFor(id: number, avatar?: string | null): string {
+	if (avatar) return avatar;
+	return CREATURES[((id % CREATURES.length) + CREATURES.length) % CREATURES.length];
+}
+```
+
+Create `src/lib/components/CreatureTile.svelte` — one full-width creature card. `.art` and `.chip` come from the global design system (Task 12); the rest is scoped here.
 
 ```svelte
 <script lang="ts">
-	import type { Player } from '$lib/types';
+	type Chip = { text: string; tone?: 'w' | 'l' | 'none' };
 	let {
 		rank,
-		player,
-		rating,
-		rated,
-		winRate,
-		games,
-		streak
+		emoji,
+		name,
+		chips = [],
+		power,
+		powerLabel = 'RATING',
+		href = null,
+		king = false
 	}: {
-		rank: number;
-		player: Player;
-		rating: number;
-		rated: boolean;
-		winRate: number;
-		games: number;
-		streak: number;
+		rank: string | number;
+		emoji: string;
+		name: string;
+		chips?: Chip[];
+		power: string | number;
+		powerLabel?: string;
+		href?: string | null;
+		king?: boolean;
 	} = $props();
-	const medal = (r: number) => (r === 1 ? '🥇' : r === 2 ? '🥈' : r === 3 ? '🥉' : `#${r}`);
 </script>
 
-<a class="card row" href={`/players/${player.id}`}>
-	<span class="rank" class:top={rank === 1}>{medal(rank)}</span>
-	<span class="name">{player.name}</span>
-	<span class="stats">
-		<span class="rating">{rated ? rating : '—'}</span>
-		<span class="pill">{games} gp · {Math.round(winRate * 100)}%{#if streak !== 0} · {streak > 0 ? `W${streak}` : `L${-streak}`}{/if}</span>
-	</span>
-</a>
+{#snippet inner()}
+	<span class="rankchip">{typeof rank === 'number' ? `#${rank}` : rank}</span>
+	<div class="art" class:gold={king}>{emoji}</div>
+	<div class="body">
+		<div class="tname">{name}</div>
+		<div class="chips">
+			{#each chips as c}<span class="chip {c.tone ?? ''}">{c.text}</span>{/each}
+		</div>
+	</div>
+	<div class="power"><b>{power}</b><small>{powerLabel}</small></div>
+{/snippet}
+
+{#if href}
+	<a class="tile" class:king {href}>{@render inner()}</a>
+{:else}
+	<div class="tile" class:king>{@render inner()}</div>
+{/if}
 
 <style>
-	.row {
+	.tile {
 		display: flex;
 		align-items: center;
-		gap: 0.75rem;
-		margin-bottom: 0.6rem;
-		text-decoration: none;
+		gap: 0.6rem;
+		background: var(--card);
 		color: var(--ink);
+		border: 2px solid var(--edge);
+		border-radius: 14px;
+		padding: 7px;
+		box-shadow: 0 5px 0 rgba(0, 0, 0, 0.28);
+		position: relative;
+		text-decoration: none;
 	}
-	.rank {
-		font-family: var(--display);
-		width: 2.5rem;
-		text-align: center;
+	.tile.king {
+		border-color: var(--gold);
 	}
-	.rank.top {
-		filter: drop-shadow(0 0 6px var(--accent-3));
-	}
-	.name {
-		flex: 1;
+	.rankchip {
+		position: absolute;
+		top: -8px;
+		left: -8px;
+		min-width: 22px;
+		height: 22px;
+		padding: 0 5px;
+		border-radius: 999px;
+		background: var(--edge);
+		color: #2a1c06;
+		font-size: 0.66rem;
 		font-weight: 800;
+		display: grid;
+		place-items: center;
+		box-shadow: 0 2px 0 rgba(0, 0, 0, 0.25);
 	}
-	.stats {
+	.tile.king .rankchip {
+		background: var(--gold);
+	}
+	.art {
+		width: 48px;
+		height: 58px;
+		flex: none;
+		font-size: 1.7rem;
+	}
+	.body {
+		flex: 1;
+		min-width: 0;
 		display: flex;
 		flex-direction: column;
-		align-items: flex-end;
-		gap: 0.2rem;
+		gap: 0.28rem;
 	}
-	.rating {
+	.tname {
+		font-weight: 800;
+		font-size: 0.98rem;
+	}
+	.chips {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.28rem;
+	}
+	.power {
+		text-align: center;
+		min-width: 3.4rem;
+	}
+	.power b {
 		font-family: var(--display);
-		font-size: 1.15rem;
-		color: var(--accent);
+		font-weight: 800;
+		font-size: 1.4rem;
+		font-variant-numeric: tabular-nums;
+		display: block;
+		line-height: 1;
+	}
+	.power small {
+		font-size: 0.52rem;
+		letter-spacing: 0.1em;
+		color: var(--muted);
+		font-weight: 800;
 	}
 </style>
 ```
 
-- [ ] **Step 5: Build the leaderboard page (Players/Teams tabs)**
+- [ ] **Step 5: Build the stepped `Podium`**
+
+Create `src/lib/components/Podium.svelte` — the top 3 as creature cards, #1 centered/largest/gold:
+
+```svelte
+<script lang="ts">
+	type Chip = { text: string; tone?: 'w' | 'l' | 'none' };
+	type Item = {
+		rank: 1 | 2 | 3;
+		emoji: string;
+		name: string;
+		power: string | number;
+		powerLabel?: string;
+		chips?: Chip[];
+		href?: string | null;
+	};
+	let { items }: { items: Item[] } = $props();
+	const byRank = (r: number) => items.find((i) => i.rank === r);
+	// Visual order: 2nd, 1st (centre), 3rd.
+	const order = [byRank(2), byRank(1), byRank(3)].filter(Boolean) as Item[];
+	const medal = (r: number) => (r === 1 ? '🥇' : r === 2 ? '🥈' : '🥉');
+	const pos = (r: number) => (r === 1 ? 'p1' : r === 2 ? 'p2' : 'p3');
+</script>
+
+<div class="podium">
+	{#each order as it}
+		<a class="bigcard {pos(it.rank)}" href={it.href ?? undefined}>
+			<span class="medal">{medal(it.rank)}</span>
+			<div class="bart" class:gold={it.rank === 1}>{it.emoji}</div>
+			<div class="bn">{it.name}</div>
+			<div class="bp">{it.power}<small>{it.powerLabel ?? 'RATING'}</small></div>
+			<div class="chips">{#each it.chips ?? [] as c}<span class="chip {c.tone ?? ''}">{c.text}</span>{/each}</div>
+		</a>
+	{/each}
+</div>
+
+<style>
+	.podium {
+		display: grid;
+		grid-template-columns: 1fr 1.18fr 1fr;
+		gap: 0.6rem;
+		align-items: end;
+		margin-bottom: 0.7rem;
+	}
+	.bigcard {
+		background: var(--card);
+		color: var(--ink);
+		border: 2px solid var(--edge);
+		border-radius: 14px;
+		padding: 8px;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.22rem;
+		box-shadow: 0 5px 0 rgba(0, 0, 0, 0.28);
+		text-align: center;
+		text-decoration: none;
+	}
+	.medal {
+		font-size: 1.3rem;
+		line-height: 1;
+	}
+	.bart {
+		width: 100%;
+		border-radius: 9px;
+		display: grid;
+		place-items: center;
+		background: linear-gradient(155deg, #31b7a9, #0e7a74);
+		border: 1.5px solid var(--edge);
+	}
+	.bart.gold {
+		background: linear-gradient(155deg, #edca66, #cf9a2c);
+	}
+	.bn {
+		font-weight: 800;
+		font-size: 0.9rem;
+	}
+	.bp {
+		font-family: var(--display);
+		font-weight: 800;
+		font-variant-numeric: tabular-nums;
+		line-height: 1.05;
+	}
+	.bp small {
+		display: block;
+		font-size: 0.5rem;
+		letter-spacing: 0.1em;
+		color: var(--muted);
+		font-weight: 800;
+	}
+	.chips {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
+		gap: 0.28rem;
+	}
+	.p1 {
+		border-color: var(--gold);
+		transform: translateY(-10px);
+	}
+	.p1 .bart {
+		height: 92px;
+		font-size: 2.4rem;
+	}
+	.p1 .bp {
+		font-size: 1.6rem;
+	}
+	.p2 .bart {
+		height: 78px;
+		font-size: 2rem;
+	}
+	.p2 .bp {
+		font-size: 1.35rem;
+	}
+	.p3 .bart {
+		height: 64px;
+		font-size: 1.7rem;
+	}
+	.p3 .bp {
+		font-size: 1.2rem;
+	}
+</style>
+```
+
+- [ ] **Step 6: Build the leaderboard page (podium + full-width tiles)**
 
 Replace `src/routes/+page.svelte` with:
 
@@ -1898,64 +2292,108 @@ Replace `src/routes/+page.svelte` with:
 <script lang="ts">
 	import ViewTabs from '$lib/components/ViewTabs.svelte';
 	import FilterBar from '$lib/components/FilterBar.svelte';
-	import RankCard from '$lib/components/RankCard.svelte';
+	import Podium from '$lib/components/Podium.svelte';
+	import CreatureTile from '$lib/components/CreatureTile.svelte';
+	import { creatureFor } from '$lib/creatures';
 	let { data } = $props();
+
+	const pct = (w: number) => `${Math.round(w * 100)}%`;
+	const streakChip = (s: number) =>
+		s > 0
+			? { text: `W${s}`, tone: 'w' as const }
+			: s < 0
+				? { text: `L${-s}`, tone: 'l' as const }
+				: { text: '–', tone: 'none' as const };
+
+	const podiumItems = $derived(
+		data.rows.slice(0, 3).map((r, i) => ({
+			rank: (i + 1) as 1 | 2 | 3,
+			emoji: creatureFor(r.player.id, r.player.avatar),
+			name: r.player.name,
+			power: r.rated ? r.rating : '—',
+			powerLabel: r.rated ? 'RATING' : 'UNRATED',
+			chips: [{ text: `${r.games} GP` }, { text: pct(r.winRate) }, streakChip(r.streak)],
+			href: `/players/${r.player.id}`
+		}))
+	);
+	const rest = $derived(data.rows.slice(3));
 </script>
 
 <h1>The Ultimate Mindbug 🐛</h1>
-<ViewTabs view={data.view} />
-<FilterBar format={data.format} range={data.range} />
+
+<div class="board-head">
+	<ViewTabs view={data.view} />
+	<FilterBar format={data.format} range={data.range} />
+</div>
 
 {#if data.view === 'teams'}
 	{#if data.teams.length === 0}
 		<p class="card">No games logged yet.</p>
 	{:else}
-		{#each data.teams as t}
-			<div class="card team">
-				<span class="names">{t.names.join(' + ')}</span>
-				<span class="pill">{t.wins}W · {t.losses}L · {Math.round(t.winRate * 100)}%</span>
-			</div>
-		{/each}
+		<div class="tiles">
+			{#each data.teams as t, i}
+				<CreatureTile
+					rank={i + 1}
+					emoji={creatureFor(t.playerIds[0], t.avatars[0])}
+					name={t.names.join(' + ')}
+					chips={[
+						{ text: `${t.games} GP` },
+						{ text: `${t.wins}W`, tone: 'w' },
+						{ text: `${t.losses}L`, tone: 'l' }
+					]}
+					power={pct(t.winRate)}
+					powerLabel="WIN%"
+					king={i === 0}
+				/>
+			{/each}
+		</div>
 	{/if}
 {:else if data.rows.length === 0}
 	<p class="card">No players yet. Add the crew on the Players page.</p>
 {:else}
-	{#each data.rows as row, i}
-		<RankCard
-			rank={i + 1}
-			player={row.player}
-			rating={row.rating}
-			rated={row.rated}
-			winRate={row.winRate}
-			games={row.games}
-			streak={row.streak}
-		/>
-	{/each}
+	<Podium items={podiumItems} />
+	<div class="tiles">
+		{#each rest as r, i}
+			<CreatureTile
+				rank={i + 4}
+				emoji={creatureFor(r.player.id, r.player.avatar)}
+				name={r.player.name}
+				chips={[{ text: `${r.games} GP` }, { text: pct(r.winRate) }, streakChip(r.streak)]}
+				power={r.rated ? r.rating : '—'}
+				powerLabel={r.rated ? 'RATING' : 'UNRATED'}
+				href={`/players/${r.player.id}`}
+			/>
+		{/each}
+	</div>
 {/if}
 
 <style>
-	.team {
+	.board-head {
 		display: flex;
+		flex-wrap: wrap;
 		justify-content: space-between;
 		align-items: center;
-		margin-bottom: 0.5rem;
+		gap: 0.6rem;
+		margin: 0.75rem 0 1rem;
 	}
-	.names {
-		font-weight: 800;
+	.tiles {
+		display: grid;
+		grid-template-columns: 1fr;
+		gap: 0.7rem;
 	}
 </style>
 ```
 
-- [ ] **Step 6: Verify build**
+- [ ] **Step 7: Verify build**
 
 Run: `npm run build`
-Expected: build succeeds. (With no DB configured yet, the page load will error at runtime only when a DB is connected — build/typecheck should pass. If typecheck runs, ensure no type errors.)
+Expected: build succeeds. (With no DB configured yet, the page load only errors at runtime once a DB is connected — build/typecheck should pass.) Then `npm run dev` and compare against `docs/superpowers/design/mindbug-ui-reference.html`: stepped podium, full-width creature tiles, chips showing games / win% / streak states, gold #1.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
-git add src/routes/+page.server.ts src/routes/+page.svelte src/lib/components/ViewTabs.svelte src/lib/components/FilterBar.svelte src/lib/components/RankCard.svelte
-git commit -m "feat: add leaderboard with Players/Teams tabs and filters"
+git add src/routes/+page.server.ts src/routes/+page.svelte src/lib/creatures.ts src/lib/components/ViewTabs.svelte src/lib/components/FilterBar.svelte src/lib/components/CreatureTile.svelte src/lib/components/Podium.svelte
+git commit -m "feat: add leaderboard with podium and creature-card tiles"
 ```
 
 ---
@@ -2340,8 +2778,8 @@ git commit -m "feat: add player profile with three-track rating chart"
 - Create: `src/routes/players/+page.server.ts`, `src/routes/players/+page.svelte`
 
 **Interfaces:**
-- Consumes: `db`, `getPlayers`, `addPlayer`, `setPlayerActive`; `isAuthed`, `requireAuth`.
-- Produces: players `load` returning `{ players, canEdit }` (canEdit = `isAuthed`); `add` and `toggle` actions (both `requireAuth`).
+- Consumes: `db`, `getPlayers`, `addPlayer`, `setPlayerActive`; `isAuthed`, `requireAuth`; `CREATURES`, `creatureFor` from `$lib/creatures`.
+- Produces: players `load` returning `{ players, canEdit }` (canEdit = `isAuthed`); `add` (accepts optional `avatar` emoji) and `toggle` actions (both `requireAuth`).
 
 Note: team records live on the leaderboard's Teams tab (Task 14), so there is no `/teams` route. This task is only the roster-management page.
 
@@ -2363,10 +2801,12 @@ export const load: PageServerLoad = async ({ cookies }) => {
 export const actions: Actions = {
 	add: async ({ request, cookies }) => {
 		requireAuth(cookies);
-		const name = String((await request.formData()).get('name') ?? '').trim();
+		const form = await request.formData();
+		const name = String(form.get('name') ?? '').trim();
+		const avatar = String(form.get('avatar') ?? '').trim() || null;
 		if (!name) return fail(400, { error: 'Name required' });
 		try {
-			await addPlayer(db, name);
+			await addPlayer(db, name, avatar);
 		} catch {
 			return fail(400, { error: 'That name already exists' });
 		}
@@ -2388,15 +2828,26 @@ Create `src/routes/players/+page.svelte`:
 ```svelte
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { CREATURES, creatureFor } from '$lib/creatures';
 	let { data, form } = $props();
+	let avatar = $state(CREATURES[0]);
 </script>
 
 <h1>Players</h1>
 
 {#if data.canEdit}
 	<form method="POST" action="?/add" use:enhance class="card add">
-		<input name="name" placeholder="New player name" />
-		<button class="btn" type="submit">Add</button>
+		<div class="row1">
+			<span class="preview">{avatar}</span>
+			<input name="name" placeholder="New player name" />
+			<button class="btn" type="submit">Add</button>
+		</div>
+		<input type="hidden" name="avatar" value={avatar} />
+		<div class="picker">
+			{#each CREATURES as c}
+				<button type="button" class:on={avatar === c} onclick={() => (avatar = c)}>{c}</button>
+			{/each}
+		</div>
 	</form>
 	{#if form?.error}<p class="err">{form.error}</p>{/if}
 {:else}
@@ -2406,7 +2857,9 @@ Create `src/routes/players/+page.svelte`:
 <ul>
 	{#each data.players as p}
 		<li class="card">
-			<a href={`/players/${p.id}`} class:inactive={!p.isActive}>{p.name}</a>
+			<a href={`/players/${p.id}`} class:inactive={!p.isActive}>
+				<span class="crea">{creatureFor(p.id, p.avatar)}</span>{p.name}
+			</a>
 			{#if data.canEdit}
 				<form method="POST" action="?/toggle" use:enhance>
 					<input type="hidden" name="id" value={p.id} />
@@ -2420,17 +2873,49 @@ Create `src/routes/players/+page.svelte`:
 
 <style>
 	.add {
-		display: flex;
-		gap: 0.5rem;
+		display: grid;
+		gap: 0.6rem;
 		margin: 1rem 0;
 	}
-	.add input {
+	.row1 {
+		display: flex;
+		gap: 0.5rem;
+		align-items: center;
+	}
+	.preview {
+		font-size: 1.4rem;
+		width: 2.2rem;
+		height: 2.2rem;
+		display: grid;
+		place-items: center;
+		border-radius: 10px;
+		background: #e7d6ad;
+		flex: none;
+	}
+	.row1 input {
 		flex: 1;
 		padding: 0.7rem;
 		border-radius: var(--radius-sm);
 		border: 2px solid var(--surface-2);
 		background: var(--bg);
 		color: var(--ink);
+	}
+	.picker {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.25rem;
+	}
+	.picker button {
+		font-size: 1.1rem;
+		border: 1.5px solid var(--surface-2);
+		background: var(--bg);
+		border-radius: 9px;
+		padding: 0.2rem 0.35rem;
+		cursor: pointer;
+	}
+	.picker button.on {
+		border-color: var(--teal);
+		background: #d7efe0;
 	}
 	ul {
 		list-style: none;
@@ -2442,6 +2927,17 @@ Create `src/routes/players/+page.svelte`:
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
+	}
+	li a {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5rem;
+		color: var(--ink);
+		text-decoration: none;
+		font-weight: 700;
+	}
+	.crea {
+		font-size: 1.2rem;
 	}
 	a.inactive {
 		opacity: 0.5;
@@ -2481,12 +2977,12 @@ Create `static/icons/icon.svg`:
 
 ```svg
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-	<rect width="512" height="512" rx="96" fill="#180d2e" />
-	<circle cx="256" cy="256" r="150" fill="#34e0a1" />
-	<circle cx="212" cy="230" r="26" fill="#180d2e" />
-	<circle cx="300" cy="230" r="26" fill="#180d2e" />
-	<path d="M190 320 q66 60 132 0" stroke="#180d2e" stroke-width="18" fill="none" stroke-linecap="round" />
-	<path d="M150 150 l40 40 M362 150 l-40 40" stroke="#ff2e88" stroke-width="18" stroke-linecap="round" />
+	<rect width="512" height="512" rx="96" fill="#0b4744" />
+	<circle cx="256" cy="256" r="150" fill="#e0a52a" />
+	<circle cx="212" cy="230" r="26" fill="#0b4744" />
+	<circle cx="300" cy="230" r="26" fill="#0b4744" />
+	<path d="M190 320 q66 60 132 0" stroke="#0b4744" stroke-width="18" fill="none" stroke-linecap="round" />
+	<path d="M150 150 l40 40 M362 150 l-40 40" stroke="#ef6a4d" stroke-width="18" stroke-linecap="round" />
 </svg>
 ```
 
@@ -2513,8 +3009,8 @@ Create `static/manifest.webmanifest`:
 	"description": "Leaderboard and Elo ratings for our Mindbug games",
 	"start_url": "/",
 	"display": "standalone",
-	"background_color": "#180d2e",
-	"theme_color": "#180d2e",
+	"background_color": "#0b4744",
+	"theme_color": "#0b4744",
 	"icons": [
 		{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
 		{ "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
