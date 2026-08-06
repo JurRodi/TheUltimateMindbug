@@ -28,6 +28,7 @@ The app settles, once and for all, who is *the Ultimate Mindbug*.
 | Rating params | Start **1000**, **K = 24** (tunable via config) |
 | Rating tracks | **Three independent Elo tracks per player: Total, 2v2, 3v3** |
 | Roster | **Start empty**; players added in-app |
+| Look & feel | **Mindbug-style** — playful, bold, monster-card-game aesthetic |
 
 ## Architecture & stack
 
@@ -56,7 +57,9 @@ bugs. Retuning K or fixing a mis-logged game simply re-derives everything.
 
 ### Tables
 
-- **`players`** — `id`, `name` (unique), `is_active` (bool), `created_at`
+- **`players`** — `id` (unique identity), `name` (**not** required to be
+  unique — two players may share a display name; identity is the `id`),
+  `is_active` (bool), `created_at`
 - **`games`** — `id`, `played_at` (date/timestamp), `format` (`'2v2' | '3v3'`),
   `winner_side` (`'A' | 'B'`), `created_at`
 - **`game_participants`** — `id`, `game_id` (FK), `player_id` (FK),
@@ -91,6 +94,32 @@ filter, each starting every player at 1000:
 A player's rating on a track only exists once they've played a game counted by
 that track (before that, they sit at the start rating / are "unrated" for that
 track).
+
+## Look & feel
+
+The app should evoke the **Mindbug** card game's aesthetic: playful, bold, and
+a little irreverent — the "quirky monster card game" vibe rather than a sober
+sports dashboard.
+
+Direction (to be refined during implementation):
+
+- **Bold, saturated palette** with strong accent colors; comfortable in a
+  dark-leaning theme so vibrant accents pop.
+- **Chunky, rounded, tactile UI** — card-like surfaces for players, games, and
+  leaderboard rows, echoing physical playing cards.
+- **Expressive, characterful typography** for headings (the leaderboard and
+  "Ultimate Mindbug" title should feel like a trophy/title screen), with a clean
+  readable body face.
+- **Playful touches** — creature/bug motifs, a celebratory feel for the #1
+  spot, subtle animation on logging a game or a rank change. Kept tasteful and
+  performant, never at the cost of legibility on a phone.
+- Fully **responsive / mobile-first**, since games are often logged on a phone
+  at the table.
+
+The concrete visual system (exact palette, type, components) will be designed
+during implementation using the frontend design workflow; this section fixes the
+*intent* so the build aims at the right target. No official Mindbug brand assets
+or logos are assumed — the look is an original homage, not a reproduction.
 
 ## Features & pages
 
