@@ -22,3 +22,6 @@ venv/
 # Editor
 .vscode/
 .idea/
+
+# Git worktrees
+.worktrees/
