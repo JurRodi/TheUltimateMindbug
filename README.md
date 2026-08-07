@@ -47,3 +47,44 @@ tool, or a small app.
 ## The players
 
 _TBD — add the crew here._
+
+## Running & deploying
+
+### Environment variables
+
+The app needs three environment variables (see `.env.example`):
+
+| Variable          | Purpose                                                       |
+| ------------------ | -------------------------------------------------------------- |
+| `DATABASE_URL`      | Neon Postgres connection string.                                |
+| `MINDBUG_PASSWORD`  | Shared password required to log games and manage players.       |
+| `AUTH_SECRET`       | Random secret used to sign the auth cookie (e.g. `openssl rand -hex 32`). |
+
+### Local development
+
+1. `npm install`
+2. Copy `.env.example` to `.env` and fill in real values (a Neon `DATABASE_URL`,
+   a `MINDBUG_PASSWORD` of your choosing, and a generated `AUTH_SECRET`).
+3. `npm run db:migrate` — applies the Drizzle migrations to the database in
+   `DATABASE_URL`.
+4. `npm run dev` — starts the app locally.
+
+Other useful scripts: `npm run db:generate` (regenerate migrations after a
+schema change) and `npm test -- --run` (full test suite).
+
+### Deploying to Vercel
+
+1. Push this repo to GitHub and connect it to a new Vercel project.
+2. Add the **Neon** integration from the Vercel marketplace (or link an
+   existing Neon project) — this sets `DATABASE_URL` in the Vercel project's
+   environment variables automatically.
+3. In the Vercel project settings, add `MINDBUG_PASSWORD` and `AUTH_SECRET`
+   as environment variables (same values you'd use locally, or new ones for
+   production).
+4. Run the migrations against the Neon database **once** before (or right
+   after) the first deploy: locally, export the production `DATABASE_URL`
+   (e.g. `DATABASE_URL="<neon-url>" npm run db:migrate`), or run it as a
+   one-off command from the Vercel dashboard/CLI.
+5. Deploy. The app builds with `@sveltejs/adapter-vercel`, so a normal Vercel
+   deploy (push to the connected branch, or `vercel deploy`) is all that's
+   needed after that.
