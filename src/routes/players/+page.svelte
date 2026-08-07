@@ -39,7 +39,9 @@
 				<form method="POST" action="?/toggle" use:enhance>
 					<input type="hidden" name="id" value={p.id} />
 					<input type="hidden" name="active" value={(!p.isActive).toString()} />
-					<button class="btn secondary" type="submit">{p.isActive ? 'Deactivate' : 'Activate'}</button>
+					<button class="btn secondary" type="submit"
+						>{p.isActive ? 'Deactivate' : 'Activate'}</button
+					>
 				</form>
 			{/if}
 		</li>

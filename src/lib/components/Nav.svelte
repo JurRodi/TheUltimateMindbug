@@ -1,18 +1,19 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { resolve } from '$app/paths';
 	const links = [
 		{ href: '/', label: 'Board', icon: '📊' },
 		{ href: '/players', label: 'Players', icon: '👾' },
 		{ href: '/log', label: 'Log', icon: '➕' }
-	];
+	] as const;
 	const isActive = (href: string) =>
 		href === '/' ? page.url.pathname === '/' : page.url.pathname.startsWith(href);
 </script>
 
 <nav>
 	<div class="brand"><span class="bug">🐛</span> Mindbug</div>
-	{#each links as l}
-		<a href={l.href} class:on={isActive(l.href)}>
+	{#each links as l (l.href)}
+		<a href={resolve(l.href)} class:on={isActive(l.href)}>
 			<span class="icon">{l.icon}</span><span class="label">{l.label}</span>
 		</a>
 	{/each}

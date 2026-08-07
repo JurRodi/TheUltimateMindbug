@@ -20,7 +20,7 @@
 <div class="podium">
 	{#each order as it (it.rank)}
 		<!-- prettier-ignore -->
-		<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- `href` is caller-supplied (e.g. /players/[id]), a route that doesn't exist in this branch yet, so it can't be wrapped in resolve() here; this generic podium component just forwards the prop. -->
+		<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- `href` is caller-supplied (already built via resolve() at the call site, e.g. /players/[id]); this generic podium component just forwards an opaque string prop, so the rule can't see it was resolved. -->
 		<a class="bigcard {pos(it.rank)}" href={it.href ?? undefined}>
 			<span class="medal">{medal(it.rank)}</span>
 			<div class="bart" class:gold={it.rank === 1}>{it.emoji}</div>

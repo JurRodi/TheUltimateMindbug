@@ -5,21 +5,52 @@ import type { GameInput } from '$lib/types';
 const NOW = new Date('2026-01-31T12:00:00Z');
 
 const games: GameInput[] = [
-	{ id: 1, playedAt: '2026-01-01T10:00:00Z', format: '2v2', winnerSide: 'A', sideA: [1, 2], sideB: [3, 4] },
-	{ id: 2, playedAt: '2026-01-15T10:00:00Z', format: '3v3', winnerSide: 'B', sideA: [1, 2, 5], sideB: [3, 4, 6] },
-	{ id: 3, playedAt: '2026-01-30T10:00:00Z', format: '2v2', winnerSide: 'B', sideA: [1, 2], sideB: [4, 6] }
+	{
+		id: 1,
+		playedAt: '2026-01-01T10:00:00Z',
+		format: '2v2',
+		winnerSide: 'A',
+		sideA: [1, 2],
+		sideB: [3, 4]
+	},
+	{
+		id: 2,
+		playedAt: '2026-01-15T10:00:00Z',
+		format: '3v3',
+		winnerSide: 'B',
+		sideA: [1, 2, 5],
+		sideB: [3, 4, 6]
+	},
+	{
+		id: 3,
+		playedAt: '2026-01-30T10:00:00Z',
+		format: '2v2',
+		winnerSide: 'B',
+		sideA: [1, 2],
+		sideB: [4, 6]
+	}
 ];
 
 describe('filterGames', () => {
 	it('filters by format track', () => {
-		expect(filterGames(games, { track: '2v2', range: 'all', now: NOW }).map((g) => g.id)).toEqual([1, 3]);
-		expect(filterGames(games, { track: '3v3', range: 'all', now: NOW }).map((g) => g.id)).toEqual([2]);
-		expect(filterGames(games, { track: 'total', range: 'all', now: NOW }).map((g) => g.id)).toEqual([1, 2, 3]);
+		expect(filterGames(games, { track: '2v2', range: 'all', now: NOW }).map((g) => g.id)).toEqual([
+			1, 3
+		]);
+		expect(filterGames(games, { track: '3v3', range: 'all', now: NOW }).map((g) => g.id)).toEqual([
+			2
+		]);
+		expect(filterGames(games, { track: 'total', range: 'all', now: NOW }).map((g) => g.id)).toEqual(
+			[1, 2, 3]
+		);
 	});
 
 	it('filters by date range (week = last 7 days, month = last 30 days)', () => {
-		expect(filterGames(games, { track: 'total', range: 'week', now: NOW }).map((g) => g.id)).toEqual([3]);
-		expect(filterGames(games, { track: 'total', range: 'month', now: NOW }).map((g) => g.id)).toEqual([2, 3]);
+		expect(
+			filterGames(games, { track: 'total', range: 'week', now: NOW }).map((g) => g.id)
+		).toEqual([3]);
+		expect(
+			filterGames(games, { track: 'total', range: 'month', now: NOW }).map((g) => g.id)
+		).toEqual([2, 3]);
 	});
 });
 

@@ -7,12 +7,20 @@ const ASSETS = [...build, ...files];
 const sw = self as unknown as ServiceWorkerGlobalScope;
 
 sw.addEventListener('install', (event) => {
-	event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(ASSETS)).then(() => sw.skipWaiting()));
+	event.waitUntil(
+		caches
+			.open(CACHE)
+			.then((cache) => cache.addAll(ASSETS))
+			.then(() => sw.skipWaiting())
+	);
 });
 
 sw.addEventListener('activate', (event) => {
 	event.waitUntil(
-		caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => sw.clients.claim())
+		caches
+			.keys()
+			.then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+			.then(() => sw.clients.claim())
 	);
 });
 
@@ -22,7 +30,5 @@ sw.addEventListener('fetch', (event) => {
 	const url = new URL(req.url);
 	// Never cache navigations/data — always try network first so the board stays fresh.
 	if (url.origin !== location.origin || req.mode === 'navigate') return;
-	event.respondWith(
-		caches.match(req).then((cached) => cached ?? fetch(req))
-	);
+	event.respondWith(caches.match(req).then((cached) => cached ?? fetch(req)));
 });

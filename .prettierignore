@@ -11,3 +11,8 @@ bun.lockb
 # Pre-existing project docs/content (not part of the app's source)
 /docs/
 /README.md
+
+# Generated / non-source / scratch — not hand-authored, don't reformat
+.superpowers/
+.worktrees/
+/drizzle/

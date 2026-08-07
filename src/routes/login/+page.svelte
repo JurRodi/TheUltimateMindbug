@@ -7,7 +7,12 @@
 <p class="muted">You only need this to log games or manage players.</p>
 
 <form method="POST" use:enhance class="card">
-	<input type="password" name="password" placeholder="Shared password" autocomplete="current-password" />
+	<input
+		type="password"
+		name="password"
+		placeholder="Shared password"
+		autocomplete="current-password"
+	/>
 	{#if form?.error}<p class="err">{form.error}</p>{/if}
 	<button class="btn" type="submit">Unlock</button>
 </form>

@@ -34,7 +34,10 @@ function chronological(games: GameInput[]): GameInput[] {
 	);
 }
 
-export function computeTrack(games: GameInput[], config: RatingConfig = DEFAULT_CONFIG): TrackResult {
+export function computeTrack(
+	games: GameInput[],
+	config: RatingConfig = DEFAULT_CONFIG
+): TrackResult {
 	const current: Record<number, number> = {};
 	const history: Snapshot[] = [];
 	const ratingOf = (id: number) => current[id] ?? config.startRating;
@@ -76,10 +79,19 @@ export interface RatingResult {
 	'3v3': TrackResult;
 }
 
-export function computeRatings(games: GameInput[], config: RatingConfig = DEFAULT_CONFIG): RatingResult {
+export function computeRatings(
+	games: GameInput[],
+	config: RatingConfig = DEFAULT_CONFIG
+): RatingResult {
 	return {
 		total: computeTrack(games, config),
-		'2v2': computeTrack(games.filter((g) => g.format === '2v2'), config),
-		'3v3': computeTrack(games.filter((g) => g.format === '3v3'), config)
+		'2v2': computeTrack(
+			games.filter((g) => g.format === '2v2'),
+			config
+		),
+		'3v3': computeTrack(
+			games.filter((g) => g.format === '3v3'),
+			config
+		)
 	};
 }

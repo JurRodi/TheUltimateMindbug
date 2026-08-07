@@ -15,7 +15,9 @@ export function verifyPassword(input: string): boolean {
 }
 
 export function cookieValue(): string {
-	return createHmac('sha256', env.AUTH_SECRET ?? '').update('authorized').digest('hex');
+	return createHmac('sha256', env.AUTH_SECRET ?? '')
+		.update('authorized')
+		.digest('hex');
 }
 
 export function isAuthed(cookies: { get(name: string): string | undefined }): boolean {

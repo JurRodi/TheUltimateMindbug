@@ -4,6 +4,7 @@
 	import Podium from '$lib/components/Podium.svelte';
 	import CreatureTile from '$lib/components/CreatureTile.svelte';
 	import { creatureFor } from '$lib/creatures';
+	import { resolve } from '$app/paths';
 	let { data } = $props();
 
 	const pct = (w: number) => `${Math.round(w * 100)}%`;
@@ -22,7 +23,7 @@
 			power: r.rated ? r.rating : '—',
 			powerLabel: r.rated ? 'RATING' : 'UNRATED',
 			chips: [{ text: `${r.games} GP` }, { text: pct(r.winRate) }, streakChip(r.streak)],
-			href: `/players/${r.player.id}`
+			href: resolve('/players/[id]', { id: String(r.player.id) })
 		}))
 	);
 	const rest = $derived(data.rows.slice(3));
@@ -70,7 +71,7 @@
 				chips={[{ text: `${r.games} GP` }, { text: pct(r.winRate) }, streakChip(r.streak)]}
 				power={r.rated ? r.rating : '—'}
 				powerLabel={r.rated ? 'RATING' : 'UNRATED'}
-				href={`/players/${r.player.id}`}
+				href={resolve('/players/[id]', { id: String(r.player.id) })}
 			/>
 		{/each}
 	</div>

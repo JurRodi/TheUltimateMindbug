@@ -26,7 +26,9 @@ describe('DEFAULT_CONFIG', () => {
 import { computeTrack } from './engine';
 import type { GameInput } from '$lib/types';
 
-const g = (over: Partial<GameInput> & Pick<GameInput, 'id' | 'playedAt' | 'winnerSide' | 'sideA' | 'sideB'>): GameInput => ({
+const g = (
+	over: Partial<GameInput> & Pick<GameInput, 'id' | 'playedAt' | 'winnerSide' | 'sideA' | 'sideB'>
+): GameInput => ({
 	format: '2v2',
 	...over
 });
@@ -59,8 +61,20 @@ describe('computeTrack', () => {
 	});
 
 	it('processes games in chronological order regardless of input order', () => {
-		const later = g({ id: 2, playedAt: '2026-01-02T10:00:00Z', winnerSide: 'B', sideA: [1, 2], sideB: [3, 4] });
-		const earlier = g({ id: 1, playedAt: '2026-01-01T10:00:00Z', winnerSide: 'A', sideA: [1, 2], sideB: [3, 4] });
+		const later = g({
+			id: 2,
+			playedAt: '2026-01-02T10:00:00Z',
+			winnerSide: 'B',
+			sideA: [1, 2],
+			sideB: [3, 4]
+		});
+		const earlier = g({
+			id: 1,
+			playedAt: '2026-01-01T10:00:00Z',
+			winnerSide: 'A',
+			sideA: [1, 2],
+			sideB: [3, 4]
+		});
 		const r = computeTrack([later, earlier]);
 		// game1: 1&2 -> 1012, 3&4 -> 988. game2: B wins; teamA=1012, teamB=988
 		// E_A = 1/(1+10^((988-1012)/400)) ≈ 0.5345; A loses => delta_A = 24*(0-0.5345) ≈ -12.83
@@ -83,8 +97,22 @@ import { computeRatings } from './engine';
 describe('computeRatings', () => {
 	it('computes three independent tracks filtered by format', () => {
 		const games: GameInput[] = [
-			{ id: 1, playedAt: '2026-01-01T10:00:00Z', format: '2v2', winnerSide: 'A', sideA: [1, 2], sideB: [3, 4] },
-			{ id: 2, playedAt: '2026-01-02T10:00:00Z', format: '3v3', winnerSide: 'A', sideA: [1, 2, 5], sideB: [3, 4, 6] }
+			{
+				id: 1,
+				playedAt: '2026-01-01T10:00:00Z',
+				format: '2v2',
+				winnerSide: 'A',
+				sideA: [1, 2],
+				sideB: [3, 4]
+			},
+			{
+				id: 2,
+				playedAt: '2026-01-02T10:00:00Z',
+				format: '3v3',
+				winnerSide: 'A',
+				sideA: [1, 2, 5],
+				sideB: [3, 4, 6]
+			}
 		];
 		const r = computeRatings(games);
 		// total sees both games; 2v2 sees only game 1; 3v3 sees only game 2
