@@ -1,12 +1,20 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	let { format, range }: { format: string; range: string } = $props();
 
 	function setParam(key: string, value: string) {
 		const url = new URL(page.url);
 		url.searchParams.set(key, value);
-		goto(url, { replaceState: true, keepFocus: true, noScroll: true });
+		// This component only renders on the home route ("/"); resolving against
+		// that literal route id satisfies svelte/no-navigation-without-resolve
+		// while preserving the same query-param-only navigation.
+		goto(resolve(`/?${url.searchParams.toString()}`), {
+			replaceState: true,
+			keepFocus: true,
+			noScroll: true
+		});
 	}
 	const formats = [
 		{ v: 'total', l: 'Total' },
@@ -22,12 +30,12 @@
 
 <div class="bar">
 	<div class="segset">
-		{#each formats as f}
+		{#each formats as f (f.v)}
 			<button class:on={format === f.v} onclick={() => setParam('format', f.v)}>{f.l}</button>
 		{/each}
 	</div>
 	<div class="segset">
-		{#each ranges as r}
+		{#each ranges as r (r.v)}
 			<button class:on={range === r.v} onclick={() => setParam('range', r.v)}>{r.l}</button>
 		{/each}
 	</div>

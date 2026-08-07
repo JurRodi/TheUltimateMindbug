@@ -18,13 +18,17 @@
 </script>
 
 <div class="podium">
-	{#each order as it}
+	{#each order as it (it.rank)}
+		<!-- prettier-ignore -->
+		<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- `href` is caller-supplied (e.g. /players/[id]), a route that doesn't exist in this branch yet, so it can't be wrapped in resolve() here; this generic podium component just forwards the prop. -->
 		<a class="bigcard {pos(it.rank)}" href={it.href ?? undefined}>
 			<span class="medal">{medal(it.rank)}</span>
 			<div class="bart" class:gold={it.rank === 1}>{it.emoji}</div>
 			<div class="bn">{it.name}</div>
 			<div class="bp">{it.power}<small>{it.powerLabel ?? 'RATING'}</small></div>
-			<div class="chips">{#each it.chips ?? [] as c}<span class="chip {c.tone ?? ''}">{c.text}</span>{/each}</div>
+			<div class="chips">
+				{#each it.chips ?? [] as c, ci (ci)}<span class="chip {c.tone ?? ''}">{c.text}</span>{/each}
+			</div>
 		</a>
 	{/each}
 </div>

@@ -27,13 +27,15 @@
 	<div class="body">
 		<div class="tname">{name}</div>
 		<div class="chips">
-			{#each chips as c}<span class="chip {c.tone ?? ''}">{c.text}</span>{/each}
+			{#each chips as c, ci (ci)}<span class="chip {c.tone ?? ''}">{c.text}</span>{/each}
 		</div>
 	</div>
 	<div class="power"><b>{power}</b><small>{powerLabel}</small></div>
 {/snippet}
 
 {#if href}
+	<!-- prettier-ignore -->
+	<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- `href` is caller-supplied (e.g. /players/[id]), a route that doesn't exist in this branch yet, so it can't be wrapped in resolve() here; this generic tile component just forwards the prop. -->
 	<a class="tile" class:king {href}>{@render inner()}</a>
 {:else}
 	<div class="tile" class:king>{@render inner()}</div>

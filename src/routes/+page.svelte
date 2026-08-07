@@ -40,7 +40,7 @@
 		<p class="card">No games logged yet.</p>
 	{:else}
 		<div class="tiles">
-			{#each data.teams as t, i}
+			{#each data.teams as t, i (t.playerIds.join('-'))}
 				<CreatureTile
 					rank={i + 1}
 					emoji={creatureFor(t.playerIds[0], t.avatars[0])}
@@ -62,7 +62,7 @@
 {:else}
 	<Podium items={podiumItems} />
 	<div class="tiles">
-		{#each rest as r, i}
+		{#each rest as r, i (r.player.id)}
 			<CreatureTile
 				rank={i + 4}
 				emoji={creatureFor(r.player.id, r.player.avatar)}
