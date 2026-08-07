@@ -10,33 +10,15 @@
 	}
 </script>
 
-<div class="tabs">
+<div class="tabset">
 	<button class:on={view === 'players'} onclick={() => set('players')}>Players</button>
 	<button class:on={view === 'teams'} onclick={() => set('teams')}>Teams</button>
 </div>
 
 <style>
-	.tabs {
-		display: flex;
-		gap: 0.25rem;
-		background: var(--surface);
-		border-radius: 999px;
-		padding: 0.3rem;
+	/* Colors/active state come from the global .tabset rules (Task 12); only
+	   layout is scoped here. */
+	.tabset {
 		margin-top: 0.75rem;
-	}
-	button {
-		flex: 1;
-		border: none;
-		background: transparent;
-		color: var(--muted);
-		font-family: var(--display);
-		font-size: 0.9rem;
-		padding: 0.5rem;
-		border-radius: 999px;
-		cursor: pointer;
-	}
-	button.on {
-		background: var(--accent);
-		color: #06231a;
 	}
 </style>

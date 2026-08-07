@@ -21,12 +21,12 @@
 </script>
 
 <div class="bar">
-	<div class="group">
+	<div class="segset">
 		{#each formats as f}
 			<button class:on={format === f.v} onclick={() => setParam('format', f.v)}>{f.l}</button>
 		{/each}
 	</div>
-	<div class="group">
+	<div class="segset">
 		{#each ranges as r}
 			<button class:on={range === r.v} onclick={() => setParam('range', r.v)}>{r.l}</button>
 		{/each}
@@ -34,32 +34,13 @@
 </div>
 
 <style>
+	/* Colors/active state come from the global .segset rules (Task 12); only
+	   layout (spacing the two groups apart) is scoped here. */
 	.bar {
 		display: flex;
 		flex-wrap: wrap;
 		gap: 0.5rem;
 		justify-content: space-between;
 		margin: 0.75rem 0 1rem;
-	}
-	.group {
-		display: flex;
-		gap: 0.25rem;
-		background: var(--surface);
-		border-radius: 999px;
-		padding: 0.25rem;
-	}
-	button {
-		border: none;
-		background: transparent;
-		color: var(--muted);
-		font-family: var(--display);
-		font-size: 0.75rem;
-		padding: 0.4rem 0.75rem;
-		border-radius: 999px;
-		cursor: pointer;
-	}
-	button.on {
-		background: var(--accent);
-		color: #06231a;
 	}
 </style>

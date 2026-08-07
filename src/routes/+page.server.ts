@@ -7,9 +7,14 @@ import type { Track, DateRange } from '$lib/types';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ url }) => {
-	const view = (url.searchParams.get('view') ?? 'players') as 'players' | 'teams';
-	const format = (url.searchParams.get('format') ?? 'total') as Track;
-	const range = (url.searchParams.get('range') ?? 'all') as DateRange;
+	// Clamp query params to known values so a bad/stale URL never 500s the
+	// home page — anything unrecognized falls back to the default.
+	const viewParam = url.searchParams.get('view');
+	const view: 'players' | 'teams' = viewParam === 'teams' ? 'teams' : 'players';
+	const formatParam = url.searchParams.get('format');
+	const format: Track = formatParam === '2v2' || formatParam === '3v3' ? formatParam : 'total';
+	const rangeParam = url.searchParams.get('range');
+	const range: DateRange = rangeParam === 'week' || rangeParam === 'month' ? rangeParam : 'all';
 	const now = new Date();
 
 	const [players, games] = await Promise.all([getPlayers(db), getAllGames(db)]);
