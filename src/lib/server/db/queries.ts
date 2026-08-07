@@ -1,4 +1,4 @@
-import { eq, asc } from 'drizzle-orm';
+import { eq, asc, sql } from 'drizzle-orm';
 import type { PgDatabase } from 'drizzle-orm/pg-core';
 import * as schema from './schema';
 import { players, games, gameParticipants } from './schema';
@@ -46,23 +46,38 @@ export async function insertGame(
 	db: DB,
 	input: { playedAt: string; format: Format; winnerSide: Side; sideA: number[]; sideB: number[] }
 ): Promise<number> {
-	return db.transaction(async (tx) => {
-		const [game] = await tx
-			.insert(games)
-			.values({
-				playedAt: new Date(input.playedAt),
-				format: input.format,
-				winnerSide: input.winnerSide
-			})
-			.returning({ id: games.id });
+	// A single atomic CTE rather than db.transaction(): the production driver
+	// (drizzle-orm/neon-http) has NO interactive transaction support and throws
+	// "No transactions support in neon-http driver" on .transaction(). One
+	// statement is still atomic in Postgres, so the game and all its
+	// participants insert together or not at all — a game row without
+	// participants would poison the rating engine with NaN. This works
+	// identically on the pglite test driver.
+	const participants = [
+		...input.sideA.map((id) => ({ id, side: 'A' as Side })),
+		...input.sideB.map((id) => ({ id, side: 'B' as Side }))
+	];
+	const values = sql.join(
+		participants.map((p) => sql`(${p.id}::int, ${p.side}::text)`),
+		sql`, `
+	);
+	const res = await db.execute(sql`
+		WITH new_game AS (
+			INSERT INTO games (played_at, format, winner_side)
+			VALUES (${new Date(input.playedAt)}, ${input.format}, ${input.winnerSide})
+			RETURNING id
+		), ins AS (
+			INSERT INTO game_participants (game_id, player_id, side)
+			SELECT new_game.id, v.player_id, v.side::side
+			FROM new_game, (VALUES ${values}) AS v(player_id, side)
+		)
+		SELECT id FROM new_game
+	`);
 
-		const rows = [
-			...input.sideA.map((playerId) => ({ gameId: game.id, playerId, side: 'A' as Side })),
-			...input.sideB.map((playerId) => ({ gameId: game.id, playerId, side: 'B' as Side }))
-		];
-		await tx.insert(gameParticipants).values(rows);
-		return game.id;
-	});
+	// db.execute()'s return shape differs by driver: neon-http resolves to a
+	// bare array of rows, pglite to a { rows: [...] } object. Handle both.
+	const rows = (Array.isArray(res) ? res : res.rows) as Array<{ id: number }>;
+	return Number(rows[0].id);
 }
 
 export async function getAllGames(db: DB): Promise<GameInput[]> {

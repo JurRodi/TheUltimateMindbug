@@ -10,7 +10,12 @@ export const actions: Actions = {
 			return fail(400, { error: 'Wrong password' });
 		}
 		cookies.set(AUTH_COOKIE, cookieValue(), authCookieOptions());
-		const to = url.searchParams.get('redirectTo') ?? '/log';
+		// Only allow same-origin local paths: a single leading slash and not
+		// protocol-relative ("//host"). Anything else falls back to /log to
+		// prevent an open redirect via ?redirectTo=.
+		const requested = url.searchParams.get('redirectTo');
+		const to =
+			requested && requested.startsWith('/') && !requested.startsWith('//') ? requested : '/log';
 		throw redirect(303, to);
 	}
 };

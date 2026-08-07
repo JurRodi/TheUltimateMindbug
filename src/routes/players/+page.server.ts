@@ -25,7 +25,9 @@ export const actions: Actions = {
 	toggle: async ({ request, cookies }) => {
 		requireAuth(cookies);
 		const form = await request.formData();
-		await setPlayerActive(db, Number(form.get('id')), form.get('active') === 'true');
+		const id = Number(form.get('id'));
+		if (!Number.isInteger(id) || id <= 0) return fail(400, { error: 'Invalid player' });
+		await setPlayerActive(db, id, form.get('active') === 'true');
 		return { ok: true };
 	}
 };
