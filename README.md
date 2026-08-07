@@ -62,15 +62,18 @@ The app needs three environment variables (see `.env.example`):
 
 ### Local development
 
-1. `npm install`
+This project uses **pnpm** (pinned via `packageManager`; run `corepack enable`
+once if you don't have pnpm).
+
+1. `pnpm install`
 2. Copy `.env.example` to `.env` and fill in real values (a Neon `DATABASE_URL`,
    a `MINDBUG_PASSWORD` of your choosing, and a generated `AUTH_SECRET`).
-3. `npm run db:migrate` — applies the Drizzle migrations to the database in
+3. `pnpm db:migrate` — applies the Drizzle migrations to the database in
    `DATABASE_URL`.
-4. `npm run dev` — starts the app locally.
+4. `pnpm dev` — starts the app locally.
 
-Other useful scripts: `npm run db:generate` (regenerate migrations after a
-schema change) and `npm test -- --run` (full test suite).
+Other useful scripts: `pnpm db:generate` (regenerate migrations after a
+schema change) and `pnpm test` (full test suite).
 
 ### Deploying to Vercel
 
@@ -83,7 +86,7 @@ schema change) and `npm test -- --run` (full test suite).
    production).
 4. Run the migrations against the Neon database **once** before (or right
    after) the first deploy: locally, export the production `DATABASE_URL`
-   (e.g. `DATABASE_URL="<neon-url>" npm run db:migrate`), or run it as a
+   (e.g. `DATABASE_URL="<neon-url>" pnpm db:migrate`), or run it as a
    one-off command from the Vercel dashboard/CLI.
 5. Deploy. The app builds with `@sveltejs/adapter-vercel`, so a normal Vercel
    deploy (push to the connected branch, or `vercel deploy`) is all that's
