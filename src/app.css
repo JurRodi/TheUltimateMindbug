@@ -1,0 +1,192 @@
+/* Fonts come from the system-font fallback stacks in --display / --body below.
+   No @fontsource imports — the npm supply-chain guard blocks those packages. */
+
+:root {
+	/* ground + surfaces */
+	--mat: #0b4744;
+	--mat-2: #0e5a56;
+	--mat-top: #0d534e;
+	--card: #f3e6c6;
+	--card-hi: #f8efd6;
+	--edge: #c99a3f;
+	--gold: #e0a52a;
+	--gold-2: #f4d271;
+	--ink: #2a2014;
+	--muted: #7c6a48;
+	--line-card: #ddc99c;
+	/* accents */
+	--teal: #17b3a6;
+	--coral: #ef6a4d;
+	--pink: #d24f96;
+	--up: #0f8f6a;
+	--down: #d64a37;
+	/* text on the dark mat */
+	--onmat: #ecfaf7;
+	--onmat-muted: #9fd0ca;
+	/* misc */
+	--gold-grad: linear-gradient(160deg, #ecc25a, #dfa528);
+	--radius: 16px;
+	--radius-sm: 11px;
+	--display: 'Poppins', 'Century Gothic', system-ui, sans-serif;
+	--body: 'Nunito', system-ui, sans-serif;
+
+	/* Semantic aliases so the form/profile components (Tasks 13, 15–17) that were
+	   authored against these names render consistently on the cream-card theme.
+	   Everything inside a `.card` is dark-on-cream; these map the old names onto
+	   the new palette. */
+	--surface: var(--card-hi); /* raised cream sub-panel */
+	--surface-2: #e7d6ad; /* tan control/track */
+	--bg: #fbf4e2; /* input field background (light cream) */
+	--accent: var(--teal); /* primary accent */
+	--accent-2: var(--pink);
+	--accent-3: var(--gold);
+	--danger: var(--down);
+	--shadow: 0 5px 0 rgba(0, 0, 0, 0.28);
+}
+
+* {
+	box-sizing: border-box;
+}
+
+html,
+body {
+	margin: 0;
+	background: radial-gradient(120% 80% at 50% 0%, var(--mat-top) 0%, var(--mat) 60%) fixed;
+	color: var(--onmat);
+	font-family: var(--body);
+	-webkit-font-smoothing: antialiased;
+	min-height: 100vh;
+}
+
+h1,
+h2,
+h3 {
+	font-family: var(--display);
+	letter-spacing: 0.01em;
+	line-height: 1.1;
+	color: var(--gold-2);
+}
+
+a {
+	color: var(--teal);
+}
+
+/* cream card surface */
+.card {
+	background: var(--card);
+	color: var(--ink);
+	border: 2px solid var(--edge);
+	border-radius: var(--radius);
+	box-shadow: 0 5px 0 rgba(0, 0, 0, 0.28);
+	padding: 0.9rem 1rem;
+}
+
+/* coral action button */
+.btn {
+	font-family: var(--display);
+	border: none;
+	border-radius: var(--radius-sm);
+	padding: 0.7rem 1.1rem;
+	background: var(--coral);
+	color: #fff;
+	cursor: pointer;
+	font-weight: 800;
+	font-size: 0.95rem;
+}
+.btn.secondary {
+	background: #e7d6ad;
+	color: var(--muted);
+}
+.btn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+/* stat chip (on cream cards) */
+.chip {
+	font-size: 0.68rem;
+	font-weight: 800;
+	padding: 0.12rem 0.45rem;
+	border-radius: 999px;
+	background: #e7d6ad;
+	color: var(--muted);
+	white-space: nowrap;
+	font-variant-numeric: tabular-nums;
+}
+.chip.w {
+	background: #d7efe0;
+	color: var(--up);
+}
+.chip.l {
+	background: #f6ddd4;
+	color: var(--down);
+}
+.chip.none {
+	opacity: 0.75;
+}
+
+/* pill (on the dark mat) */
+.pill {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.35rem;
+	padding: 0.2rem 0.6rem;
+	border-radius: 999px;
+	background: rgba(0, 0, 0, 0.24);
+	color: var(--onmat-muted);
+	font-size: 0.78rem;
+	font-variant-numeric: tabular-nums;
+}
+
+/* tab + segment controls (Players/Teams, Total/2v2/3v3) */
+.tabset,
+.segset {
+	display: inline-flex;
+	gap: 3px;
+	border-radius: 999px;
+	padding: 3px;
+	background: rgba(0, 0, 0, 0.26);
+}
+.tabset button,
+.segset button {
+	font-family: var(--display);
+	font-size: 0.72rem;
+	font-weight: 800;
+	padding: 0.34rem 0.72rem;
+	border: 0;
+	border-radius: 999px;
+	background: transparent;
+	color: var(--onmat-muted);
+	cursor: pointer;
+}
+.tabset button.on,
+.segset button.on {
+	background: var(--gold-grad);
+	color: #2a2014;
+}
+
+/* creature avatar art frame */
+.art {
+	border-radius: 9px;
+	display: grid;
+	place-items: center;
+	background: linear-gradient(155deg, #31b7a9, #0e7a74);
+	border: 1.5px solid var(--edge);
+}
+.art.gold {
+	background: linear-gradient(155deg, #edca66, #cf9a2c);
+}
+
+/* content width + bottom padding for the fixed mobile nav */
+.wrap {
+	width: 100%;
+	max-width: 760px;
+	margin: 0 auto;
+	padding: 1.1rem 1rem 6rem;
+}
+
+@media (min-width: 820px) {
+	.wrap {
+		padding-bottom: 2rem;
+	}
+}
