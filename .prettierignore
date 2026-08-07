@@ -11,6 +11,10 @@ bun.lockb
 # Pre-existing project docs/content (not part of the app's source)
 /docs/
 /README.md
+/CLAUDE.md
+
+# Local tooling config (not app source)
+/.claude/
 
 # Generated / non-source / scratch — not hand-authored, don't reformat
 .superpowers/
