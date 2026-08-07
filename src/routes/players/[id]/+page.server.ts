@@ -10,6 +10,7 @@ const TRACKS: Track[] = ['total', '2v2', '3v3'];
 
 export const load: PageServerLoad = async ({ params }) => {
 	const id = Number(params.id);
+	if (!Number.isInteger(id)) throw error(404, 'Player not found');
 	const player = await getPlayer(db, id);
 	if (!player) throw error(404, 'Player not found');
 

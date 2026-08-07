@@ -42,7 +42,9 @@
 		</fieldset>
 	</div>
 
-	<label>Date <input type="date" name="playedAt" /></label>
+	<label
+		>Date <input type="date" name="playedAt" value={new Date().toISOString().slice(0, 10)} /></label
+	>
 	{#if form?.error}<p class="err">{form.error}</p>{/if}
 	<button class="btn" type="submit">Save game</button>
 </form>
