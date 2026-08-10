@@ -92,11 +92,14 @@
 		a {
 			flex-direction: row;
 			justify-content: flex-start;
-			gap: 0.55rem;
-			font-size: 0.85rem;
+			gap: 0.65rem;
+			font-size: 0.95rem;
 			text-transform: none;
 			letter-spacing: 0;
-			padding: 0.58rem 0.7rem;
+			padding: 0.68rem 0.8rem;
+		}
+		a .icon {
+			font-size: 1.2rem;
 		}
 	}
 </style>

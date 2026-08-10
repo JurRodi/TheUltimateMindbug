@@ -11,8 +11,10 @@
 	};
 	let { items }: { items: Item[] } = $props();
 	const byRank = (r: number) => items.find((i) => i.rank === r);
-	// Visual order: 2nd, 1st (centre), 3rd.
-	const order = [byRank(2), byRank(1), byRank(3)].filter(Boolean) as Item[];
+	// Visual order: 2nd, 1st (centre), 3rd. Must be `$derived`: the `items` prop
+	// changes on every format/range tab switch, and the podium has to re-render
+	// the new top 3 rather than keep the values captured at mount.
+	const order = $derived([byRank(2), byRank(1), byRank(3)].filter(Boolean) as Item[]);
 	const medal = (r: number) => (r === 1 ? '🥇' : r === 2 ? '🥈' : '🥉');
 	const pos = (r: number) => (r === 1 ? 'p1' : r === 2 ? 'p2' : 'p3');
 </script>

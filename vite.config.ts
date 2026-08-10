@@ -28,6 +28,20 @@ export default defineConfig({
 					include: ['src/**/*.{test,spec}.{js,ts}'],
 					exclude: ['src/**/*.svelte.{test,spec}.{js,ts}']
 				}
+			},
+			{
+				extends: './vite.config.ts',
+				// Client project: mounts Svelte components in a DOM so we can assert
+				// reactive behaviour (e.g. a component re-rendering when a prop
+				// changes). `.svelte.test.ts` files get runes support from the
+				// compiler, so tests can wrap props in `$state`. The browser
+				// resolve condition makes `svelte` resolve to its client build.
+				resolve: { conditions: ['browser'] },
+				test: {
+					name: 'client',
+					environment: 'happy-dom',
+					include: ['src/**/*.svelte.{test,spec}.{js,ts}']
+				}
 			}
 		]
 	}
