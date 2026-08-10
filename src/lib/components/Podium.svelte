@@ -97,7 +97,6 @@
 	}
 	.p1 {
 		border-color: var(--gold);
-		transform: translateY(-10px);
 	}
 	.p1 .bart {
 		height: 92px;
