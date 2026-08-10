@@ -21,8 +21,9 @@ export const actions: Actions = {
 		const sideA = form.getAll('sideA').map(Number).filter(Boolean);
 		const sideB = form.getAll('sideB').map(Number).filter(Boolean);
 
-		const size = format === '2v2' ? 2 : 3;
-		if (format !== '2v2' && format !== '3v3') return fail(400, { error: 'Pick a format' });
+		const size = format === '1v1' ? 1 : format === '2v2' ? 2 : 3;
+		if (format !== '1v1' && format !== '2v2' && format !== '3v3')
+			return fail(400, { error: 'Pick a format' });
 		if (winnerSide !== 'A' && winnerSide !== 'B')
 			return fail(400, { error: 'Pick the winning side' });
 		if (sideA.length !== size || sideB.length !== size)

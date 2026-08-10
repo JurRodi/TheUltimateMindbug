@@ -3,8 +3,8 @@
 	import PlayerSelect from '$lib/components/PlayerSelect.svelte';
 	let { data, form } = $props();
 
-	let format = $state<'2v2' | '3v3'>('2v2');
-	let size = $derived(format === '2v2' ? 2 : 3);
+	let format = $state<'1v1' | '2v2' | '3v3'>('2v2');
+	let size = $derived(format === '1v1' ? 1 : format === '2v2' ? 2 : 3);
 	let winnerSide = $state<'A' | 'B'>('A');
 
 	// Fixed-length backing arrays; only the first `size` slots are rendered/submitted.
@@ -46,6 +46,7 @@
 	<input type="hidden" name="winnerSide" value={winnerSide} />
 
 	<div class="seg">
+		<button type="button" class:on={format === '1v1'} onclick={() => (format = '1v1')}>1v1</button>
 		<button type="button" class:on={format === '2v2'} onclick={() => (format = '2v2')}>2v2</button>
 		<button type="button" class:on={format === '3v3'} onclick={() => (format = '3v3')}>3v3</button>
 	</div>
