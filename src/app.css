@@ -125,6 +125,58 @@ a {
 	opacity: 0.75;
 }
 
+/* board aside: champion / this-week / legend info cards (on the dark mat) */
+.aside {
+	display: flex;
+	flex-direction: column;
+	gap: 0.7rem;
+}
+.info {
+	border-radius: 16px;
+	padding: 1rem;
+	background: rgba(0, 0, 0, 0.22);
+	border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.info.grad {
+	background: var(--gold-grad);
+	border: 0;
+	color: #3a2b06;
+}
+.info h4 {
+	margin: 0 0 0.5rem;
+	font-size: 0.7rem;
+	letter-spacing: 0.07em;
+	text-transform: uppercase;
+	font-weight: 800;
+	color: var(--onmat-muted);
+}
+.info.grad h4 {
+	color: rgba(58, 43, 6, 0.7);
+}
+.info .big {
+	font-weight: 800;
+	font-size: 1.7rem;
+	font-variant-numeric: tabular-nums;
+	font-family: var(--display);
+}
+.info .row {
+	display: flex;
+	justify-content: space-between;
+	font-size: 0.82rem;
+	padding: 0.28rem 0;
+}
+.info:not(.grad) .row + .row {
+	border-top: 1px solid rgba(255, 255, 255, 0.09);
+}
+.legend {
+	font-size: 0.72rem;
+	color: var(--onmat-muted);
+	line-height: 1.7;
+}
+.legend .chip {
+	margin-right: 0.2rem;
+}
+
 /* pill (on the dark mat) */
 .pill {
 	display: inline-flex;

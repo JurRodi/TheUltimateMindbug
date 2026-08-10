@@ -3,6 +3,7 @@ import { getPlayers, getAllGames } from '$lib/server/db/queries';
 import { computeRatings } from '$lib/rating/engine';
 import { allPlayerStats } from '$lib/stats/aggregate';
 import { teamStats } from '$lib/stats/teams';
+import { weekSummary } from '$lib/stats/summary';
 import type { Track, DateRange } from '$lib/types';
 import type { PageServerLoad } from './$types';
 
@@ -53,5 +54,19 @@ export const load: PageServerLoad = async ({ url }) => {
 		avatars: t.playerIds.map((id) => avatarById.get(id) ?? null)
 	}));
 
-	return { view, format, range, rows, teams };
+	// "This week" summary card. Always the last 7 days (independent of the range
+	// filter) for the currently selected format track.
+	const summary = weekSummary(games, track.history, format, now);
+	const weekly = {
+		games: summary.gamesThisWeek,
+		delta: summary.gamesDelta,
+		climb: summary.biggestClimb
+			? {
+					name: nameById.get(summary.biggestClimb.playerId) ?? `#${summary.biggestClimb.playerId}`,
+					gain: Math.round(summary.biggestClimb.gain)
+				}
+			: null
+	};
+
+	return { view, format, range, rows, teams, weekly };
 };
