@@ -1,7 +1,7 @@
 export type Side = 'A' | 'B';
-export type Format = '2v2' | '3v3';
-/** Rating/leaderboard track. 'total' = all games; '2v2'/'3v3' = format-filtered. */
-export type Track = 'total' | '2v2' | '3v3';
+export type Format = '1v1' | '2v2' | '3v3';
+/** Rating/leaderboard track. 'total' = all games; '1v1'/'2v2'/'3v3' = format-filtered. */
+export type Track = 'total' | '1v1' | '2v2' | '3v3';
 export type DateRange = 'week' | 'month' | 'all';
 
 /** A single logged game, already shaped for the pure engine/stats layers. */

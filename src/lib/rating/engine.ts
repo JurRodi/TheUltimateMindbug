@@ -75,6 +75,7 @@ export function computeTrack(
 
 export interface RatingResult {
 	total: TrackResult;
+	'1v1': TrackResult;
 	'2v2': TrackResult;
 	'3v3': TrackResult;
 }
@@ -85,6 +86,10 @@ export function computeRatings(
 ): RatingResult {
 	return {
 		total: computeTrack(games, config),
+		'1v1': computeTrack(
+			games.filter((g) => g.format === '1v1'),
+			config
+		),
 		'2v2': computeTrack(
 			games.filter((g) => g.format === '2v2'),
 			config

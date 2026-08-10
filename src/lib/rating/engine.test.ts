@@ -124,3 +124,49 @@ describe('computeRatings', () => {
 		expect(r.total.current[5]).toBeGreaterThan(1000);
 	});
 });
+
+describe('1v1 (length-1 sides)', () => {
+	it('rates a 1v1 as a standard head-to-head', () => {
+		const r = computeTrack([
+			g({
+				id: 1,
+				playedAt: '2026-01-01T10:00:00Z',
+				format: '1v1',
+				winnerSide: 'A',
+				sideA: [1],
+				sideB: [2]
+			})
+		]);
+		expect(r.current[1]).toBeCloseTo(1012, 6);
+		expect(r.current[2]).toBeCloseTo(988, 6);
+	});
+
+	it('computeRatings isolates the 1v1 track while total sees all games', () => {
+		const games = [
+			g({
+				id: 1,
+				playedAt: '2026-01-01T10:00:00Z',
+				format: '1v1',
+				winnerSide: 'A',
+				sideA: [1],
+				sideB: [2]
+			}),
+			g({
+				id: 2,
+				playedAt: '2026-01-02T10:00:00Z',
+				format: '2v2',
+				winnerSide: 'A',
+				sideA: [1, 3],
+				sideB: [2, 4]
+			})
+		];
+		const r = computeRatings(games);
+		expect(
+			Object.keys(r['1v1'].current)
+				.map(Number)
+				.sort((a, b) => a - b)
+		).toEqual([1, 2]);
+		expect(r['1v1'].history).toHaveLength(2);
+		expect(r.total.history).toHaveLength(6);
+	});
+});
