@@ -1,0 +1,18 @@
+# Local development Postgres for The Ultimate Mindbug.
+# Not used in production (Vercel + Neon). Start with: docker compose up -d
+services:
+  db:
+    image: postgres:17
+    container_name: mindbug-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: mindbug
+      POSTGRES_PASSWORD: mindbug
+      POSTGRES_DB: mindbug
+    ports:
+      - '5433:5432'
+    volumes:
+      - mindbug-pgdata:/var/lib/postgresql/data
+
+volumes:
+  mindbug-pgdata:

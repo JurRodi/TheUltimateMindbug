@@ -63,17 +63,25 @@ The app needs three environment variables (see `.env.example`):
 ### Local development
 
 This project uses **pnpm** (pinned via `packageManager`; run `corepack enable`
-once if you don't have pnpm).
+once if you don't have pnpm) and a local Postgres in Docker for development.
 
-1. `pnpm install`
-2. Copy `.env.example` to `.env` and fill in real values (a Neon `DATABASE_URL`,
-   a `MINDBUG_PASSWORD` of your choosing, and a generated `AUTH_SECRET`).
-3. `pnpm db:migrate` — applies the Drizzle migrations to the database in
-   `DATABASE_URL`.
-4. `pnpm dev` — starts the app locally.
+The app picks its database driver automatically from `DATABASE_URL`: a
+`localhost` URL uses **node-postgres** (for the Docker db below), while a Neon
+host uses the **Neon HTTP** driver (production). So local dev needs no special
+configuration beyond pointing `DATABASE_URL` at the local database.
+
+1. `docker compose up -d` — starts a local Postgres on host port `5433`.
+2. `pnpm install`
+3. Copy `.env.example` to `.env`. Its default `DATABASE_URL` already points at
+   the Docker database; set any `MINDBUG_PASSWORD` and `AUTH_SECRET` you like.
+4. `pnpm db:seed` — **resets** the local database, applies migrations, and
+   fills it with dummy players and games so the board has something to show.
+   (Safety: this refuses to run against any non-`localhost` database.)
+5. `pnpm dev` — starts the app locally.
 
 Other useful scripts: `pnpm db:generate` (regenerate migrations after a
-schema change) and `pnpm test` (full test suite).
+schema change), `pnpm db:migrate` (apply migrations to a **Neon**
+`DATABASE_URL`), and `pnpm test` (full test suite).
 
 ### Deploying to Vercel
 

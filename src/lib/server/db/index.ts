@@ -1,5 +1,6 @@
 import { drizzle } from 'drizzle-orm/neon-http';
 import { neon } from '@neondatabase/serverless';
+import { createRequire } from 'node:module';
 import { env } from '$env/dynamic/private';
 import * as schema from './schema';
 
@@ -7,9 +8,31 @@ type Db = ReturnType<typeof drizzle<typeof schema>>;
 
 let _db: Db | null = null;
 
+/** True for a plain local Postgres (e.g. the docker-compose db in dev). */
+function isLocalPostgres(url: string): boolean {
+	try {
+		const host = new URL(url).hostname;
+		return host === 'localhost' || host === '127.0.0.1' || host === '::1';
+	} catch {
+		return false;
+	}
+}
+
 function initDb(): Db {
 	if (!env.DATABASE_URL) {
 		throw new Error('DATABASE_URL is not set');
+	}
+	if (isLocalPostgres(env.DATABASE_URL)) {
+		// Local development against a standard Postgres. The Neon HTTP driver
+		// only speaks to Neon endpoints, so use node-postgres here instead.
+		// `pg` is a devDependency loaded via createRequire so it never enters
+		// the production bundle — prod URLs are Neon and never reach this branch.
+		const require = createRequire(import.meta.url);
+		const { Pool } = require('pg');
+		const { drizzle: drizzlePg } = require('drizzle-orm/node-postgres');
+		return drizzlePg(new Pool({ connectionString: env.DATABASE_URL }), {
+			schema
+		}) as unknown as Db;
 	}
 	return drizzle(neon(env.DATABASE_URL), { schema });
 }
