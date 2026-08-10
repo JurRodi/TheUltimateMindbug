@@ -147,6 +147,13 @@
 		border-radius: 999px;
 		padding: 0.1rem 0.5rem 0.1rem 0.28rem;
 		border: 1.5px solid transparent;
+		transition:
+			transform 0.12s ease,
+			filter 0.12s ease;
+	}
+	.pchip:hover {
+		transform: translateY(-1px);
+		filter: brightness(0.97);
 	}
 	.pchip .em {
 		font-size: 0.9rem;

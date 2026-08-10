@@ -266,3 +266,99 @@ a {
 		max-width: 1040px;
 	}
 }
+
+/* ============================================================
+   Interaction states — hover, focus, press, loading, motion
+   ============================================================ */
+
+/* Buttons brighten on hover; the press nudge already lives on .btn:active. */
+.btn {
+	transition:
+		filter 0.15s ease,
+		transform 0.08s ease,
+		box-shadow 0.08s ease;
+}
+.btn:hover {
+	filter: brightness(1.06);
+}
+.btn.secondary:hover {
+	filter: none;
+	background: #dcc79b;
+}
+/* Disabled buttons never react to hover. */
+.btn:disabled,
+.btn:disabled:hover {
+	filter: none;
+	transform: none;
+}
+
+/* Segmented / tab controls: inactive segments highlight on hover. */
+.segset button,
+.tabset button {
+	transition:
+		background 0.15s ease,
+		color 0.15s ease;
+}
+.segset button:not(.on):hover,
+.tabset button:not(.on):hover {
+	background: rgba(255, 255, 255, 0.1);
+	color: var(--onmat);
+}
+
+/* Leaderboard cards (tiles + podium) lift on hover, press down on tap.
+   `a.<class>` outranks the components' scoped `.<class>` base rule regardless
+   of stylesheet order, so these win without !important. */
+a.tile,
+a.bigcard {
+	transition:
+		transform 0.14s ease,
+		box-shadow 0.14s ease;
+}
+a.tile:hover,
+a.bigcard:hover {
+	transform: translateY(-3px);
+	box-shadow: 0 8px 0 rgba(0, 0, 0, 0.28);
+}
+a.tile:active,
+a.bigcard:active {
+	transform: translateY(1px);
+	box-shadow: 0 3px 0 rgba(0, 0, 0, 0.28);
+}
+
+/* Visible keyboard focus everywhere. `:where()` keeps specificity at 0 so it
+   only adds the ring and never fights a component's own styling. Mouse clicks
+   stay ring-free thanks to :focus-visible. */
+:where(a, button, input, select, [tabindex]):focus-visible {
+	outline: 2px solid var(--gold-2);
+	outline-offset: 2px;
+	border-radius: 5px;
+}
+
+/* Inline spinner for form submit buttons (uses currentColor to read on any bg). */
+.spin {
+	display: inline-block;
+	width: 0.9em;
+	height: 0.9em;
+	border: 2px solid color-mix(in srgb, currentColor 28%, transparent);
+	border-top-color: currentColor;
+	border-radius: 50%;
+	animation: spin 0.6s linear infinite;
+	vertical-align: -0.1em;
+}
+@keyframes spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+/* Honor reduced-motion: neutralize transitions, spinners, and view transitions. */
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		transition-duration: 0.01ms !important;
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		scroll-behavior: auto !important;
+	}
+}

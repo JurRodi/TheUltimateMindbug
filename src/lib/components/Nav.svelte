@@ -51,9 +51,16 @@
 		text-decoration: none;
 		padding: 0.3rem 0.6rem;
 		border-radius: 10px;
+		transition:
+			background 0.15s ease,
+			color 0.15s ease;
 	}
 	a .icon {
 		font-size: 1.05rem;
+	}
+	a:not(.on):hover {
+		background: rgba(255, 255, 255, 0.08);
+		color: var(--onmat);
 	}
 	a.on {
 		color: #2a2014;
