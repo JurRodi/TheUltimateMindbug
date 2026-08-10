@@ -1,6 +1,6 @@
 import { pgTable, serial, text, boolean, timestamp, integer, pgEnum } from 'drizzle-orm/pg-core';
 
-export const formatEnum = pgEnum('format', ['2v2', '3v3']);
+export const formatEnum = pgEnum('format', ['1v1', '2v2', '3v3']);
 export const sideEnum = pgEnum('side', ['A', 'B']);
 
 export const players = pgTable('players', {

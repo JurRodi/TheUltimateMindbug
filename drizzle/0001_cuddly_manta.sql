@@ -1,0 +1,1 @@
+ALTER TYPE "public"."format" ADD VALUE '1v1' BEFORE '2v2';
