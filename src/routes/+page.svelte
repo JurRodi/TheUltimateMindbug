@@ -1,6 +1,5 @@
 <script lang="ts">
-	import ViewTabs from '$lib/components/ViewTabs.svelte';
-	import FilterBar from '$lib/components/FilterBar.svelte';
+	import BoardFilters from '$lib/components/BoardFilters.svelte';
 	import Podium from '$lib/components/Podium.svelte';
 	import CreatureTile from '$lib/components/CreatureTile.svelte';
 	import { creatureFor } from '$lib/creatures';
@@ -36,10 +35,7 @@
 
 <h1>The Ultimate Mindbug 🐛</h1>
 
-<div class="board-head">
-	<ViewTabs view={data.view} />
-	<FilterBar format={data.format} range={data.range} />
-</div>
+<BoardFilters view={data.view} format={data.format} range={data.range} />
 
 {#if data.view === 'teams'}
 	{#if data.teams.length === 0}
@@ -119,14 +115,6 @@
 {/if}
 
 <style>
-	.board-head {
-		display: flex;
-		flex-wrap: wrap;
-		justify-content: space-between;
-		align-items: center;
-		gap: 0.6rem;
-		margin: 0.75rem 0 1rem;
-	}
 	.tiles {
 		display: grid;
 		grid-template-columns: 1fr;
