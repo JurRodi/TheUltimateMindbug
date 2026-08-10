@@ -16,8 +16,11 @@ export const load: PageServerLoad = async ({ url, cookies }) => {
 	const [savedView, savedFormat, savedRange] = (cookies.get('mb_board') ?? '').split('|');
 	const viewParam = url.searchParams.get('view') ?? savedView;
 	const view: 'players' | 'teams' = viewParam === 'teams' ? 'teams' : 'players';
-	const formatParam = url.searchParams.get('format') ?? savedFormat;
-	const format: Track = formatParam === '2v2' || formatParam === '3v3' ? formatParam : 'total';
+	const rawFormat = url.searchParams.get('format') ?? savedFormat;
+	let format: Track =
+		rawFormat === '1v1' || rawFormat === '2v2' || rawFormat === '3v3' ? rawFormat : 'total';
+	// A 1v1 has no team; the Teams view falls back to Total.
+	if (view === 'teams' && format === '1v1') format = 'total';
 	const rangeParam = url.searchParams.get('range') ?? savedRange;
 	const range: DateRange = rangeParam === 'week' || rangeParam === 'month' ? rangeParam : 'all';
 	cookies.set('mb_board', `${view}|${format}|${range}`, {

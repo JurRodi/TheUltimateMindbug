@@ -21,11 +21,21 @@
 		{ v: 'players', l: 'Players' },
 		{ v: 'teams', l: 'Teams' }
 	];
-	const formats = [
-		{ v: 'total', l: 'Total' },
-		{ v: '2v2', l: '2v2' },
-		{ v: '3v3', l: '3v3' }
-	];
+	// 1v1 games have no team, so the 1v1 segment only appears in the Players view.
+	const formats = $derived(
+		view === 'teams'
+			? [
+					{ v: 'total', l: 'Total' },
+					{ v: '2v2', l: '2v2' },
+					{ v: '3v3', l: '3v3' }
+				]
+			: [
+					{ v: 'total', l: 'Total' },
+					{ v: '1v1', l: '1v1' },
+					{ v: '2v2', l: '2v2' },
+					{ v: '3v3', l: '3v3' }
+				]
+	);
 	const ranges = [
 		{ v: 'all', l: 'All time' },
 		{ v: 'month', l: 'Month' },
