@@ -1,4 +1,4 @@
-import type { GameInput, Track, DateRange } from '$lib/types';
+import type { GameInput, Format, Track, DateRange } from '$lib/types';
 
 export interface StatsOpts {
 	track: Track;
@@ -78,4 +78,49 @@ export function allPlayerStats(
 	opts: StatsOpts
 ): PlayerStats[] {
 	return playerIds.map((id) => playerStats(games, id, opts));
+}
+
+/** One row of a player's game history, resolved to ids (names/avatars are joined later). */
+export interface GameLogEntry {
+	gameId: number;
+	playedAt: string;
+	format: Format;
+	won: boolean;
+	/** Total-track rating change for this player in this game (rounded), or 0 if unknown. */
+	delta: number;
+	/** Player's own side members, excluding the player. */
+	teammateIds: number[];
+	/** Player ids on the opposing side. */
+	opponentIds: number[];
+}
+
+/**
+ * The player's full game history, newest first, for the "Recent games" list.
+ * `deltaByGame` maps gameId -> the player's rating change on the chosen track
+ * (typically the 'total' track); missing entries fall back to 0.
+ */
+export function playerGameLog(
+	games: GameInput[],
+	playerId: number,
+	deltaByGame: Map<number, number>
+): GameLogEntry[] {
+	return games
+		.filter((g) => g.sideA.includes(playerId) || g.sideB.includes(playerId))
+		.map((g) => {
+			const onA = g.sideA.includes(playerId);
+			const mySide = onA ? g.sideA : g.sideB;
+			const oppSide = onA ? g.sideB : g.sideA;
+			return {
+				gameId: g.id,
+				playedAt: g.playedAt,
+				format: g.format,
+				won: g.winnerSide === (onA ? 'A' : 'B'),
+				delta: Math.round(deltaByGame.get(g.id) ?? 0),
+				teammateIds: mySide.filter((id) => id !== playerId),
+				opponentIds: [...oppSide]
+			};
+		})
+		.sort((a, b) =>
+			a.playedAt === b.playedAt ? b.gameId - a.gameId : a.playedAt < b.playedAt ? 1 : -1
+		);
 }

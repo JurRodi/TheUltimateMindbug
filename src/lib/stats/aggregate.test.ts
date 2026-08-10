@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { filterGames, playerStats, allPlayerStats } from './aggregate';
+import { filterGames, playerStats, allPlayerStats, playerGameLog } from './aggregate';
 import type { GameInput } from '$lib/types';
 
 const NOW = new Date('2026-01-31T12:00:00Z');
@@ -79,5 +79,50 @@ describe('allPlayerStats', () => {
 	it('returns one entry per requested player id', () => {
 		const rows = allPlayerStats(games, [1, 2, 3, 4], { track: 'total', range: 'all', now: NOW });
 		expect(rows.map((r) => r.playerId)).toEqual([1, 2, 3, 4]);
+	});
+});
+
+describe('playerGameLog', () => {
+	const deltaByGame = new Map<number, number>([
+		[1, 12],
+		[3, -5]
+		// game 2 intentionally omitted to exercise the 0 fallback
+	]);
+
+	it('returns the player’s games newest-first with resolved sides and deltas', () => {
+		const log = playerGameLog(games, 1, deltaByGame);
+		expect(log.map((e) => e.gameId)).toEqual([3, 2, 1]);
+
+		const [g3, g2, g1] = log;
+		expect(g3).toMatchObject({
+			format: '2v2',
+			won: false,
+			delta: -5,
+			teammateIds: [2],
+			opponentIds: [4, 6]
+		});
+		// game 2: player 1 on sideA (lost), delta falls back to 0
+		expect(g2).toMatchObject({
+			format: '3v3',
+			won: false,
+			delta: 0,
+			teammateIds: [2, 5],
+			opponentIds: [3, 4, 6]
+		});
+		expect(g1).toMatchObject({
+			format: '2v2',
+			won: true,
+			delta: 12,
+			teammateIds: [2],
+			opponentIds: [3, 4]
+		});
+	});
+
+	it('omits games the player did not play in', () => {
+		// player 5 only appears in game 2
+		const log = playerGameLog(games, 5, deltaByGame);
+		expect(log.map((e) => e.gameId)).toEqual([2]);
+		expect(log[0].teammateIds).toEqual([1, 2]);
+		expect(log[0].opponentIds).toEqual([3, 4, 6]);
 	});
 });

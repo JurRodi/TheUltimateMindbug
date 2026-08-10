@@ -1,8 +1,9 @@
 import { error } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
-import { getPlayer, getAllGames } from '$lib/server/db/queries';
+import { getPlayer, getPlayers, getAllGames } from '$lib/server/db/queries';
 import { computeRatings } from '$lib/rating/engine';
-import { playerStats } from '$lib/stats/aggregate';
+import { playerStats, playerGameLog } from '$lib/stats/aggregate';
+import { creatureFor } from '$lib/creatures';
 import type { Track } from '$lib/types';
 import type { PageServerLoad } from './$types';
 
@@ -11,10 +12,14 @@ const TRACKS: Track[] = ['total', '2v2', '3v3'];
 export const load: PageServerLoad = async ({ params }) => {
 	const id = Number(params.id);
 	if (!Number.isInteger(id)) throw error(404, 'Player not found');
-	const player = await getPlayer(db, id);
+
+	const [player, players, games] = await Promise.all([
+		getPlayer(db, id),
+		getPlayers(db),
+		getAllGames(db)
+	]);
 	if (!player) throw error(404, 'Player not found');
 
-	const games = await getAllGames(db);
 	const ratings = computeRatings(games);
 	const now = new Date();
 
@@ -31,5 +36,44 @@ export const load: PageServerLoad = async ({ params }) => {
 		TRACKS.map((t) => [t, playerStats(games, id, { track: t, range: 'all', now })])
 	) as Record<Track, ReturnType<typeof playerStats>>;
 
-	return { player, series, stats };
+	// Overall board position, among active players who have a total-track rating.
+	const total = ratings.total.current;
+	const ranked = players
+		.filter((p) => p.isActive && total[p.id] !== undefined)
+		.sort((a, b) => total[b.id] - total[a.id]);
+	const rankIndex = ranked.findIndex((p) => p.id === id);
+	const rank = rankIndex >= 0 ? rankIndex + 1 : null;
+	const rankTotal = ranked.length;
+
+	// Full game history for the "Recent games" list — deltas from the total track,
+	// other players resolved to their name + avatar emoji.
+	const nameById = new Map(players.map((p) => [p.id, p.name]));
+	const avatarById = new Map(players.map((p) => [p.id, p.avatar]));
+	const resolve = (pid: number) => ({
+		id: pid,
+		name: nameById.get(pid) ?? `#${pid}`,
+		emoji: creatureFor(pid, avatarById.get(pid))
+	});
+	const deltaByGame = new Map(
+		ratings.total.history.filter((h) => h.playerId === id).map((h) => [h.gameId, h.delta])
+	);
+	const history = playerGameLog(games, id, deltaByGame).map((e) => ({
+		gameId: e.gameId,
+		playedAt: e.playedAt,
+		format: e.format,
+		won: e.won,
+		delta: e.delta,
+		teammates: e.teammateIds.map(resolve),
+		opponents: e.opponentIds.map(resolve)
+	}));
+
+	return {
+		player,
+		avatar: creatureFor(player.id, player.avatar),
+		rank,
+		rankTotal,
+		series,
+		stats,
+		history
+	};
 };
