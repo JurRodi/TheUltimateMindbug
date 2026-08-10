@@ -7,7 +7,7 @@ import { creatureFor } from '$lib/creatures';
 import type { Track } from '$lib/types';
 import type { PageServerLoad } from './$types';
 
-const TRACKS: Track[] = ['total', '2v2', '3v3'];
+const TRACKS: Track[] = ['total', '1v1', '2v2', '3v3'];
 
 export const load: PageServerLoad = async ({ params }) => {
 	const id = Number(params.id);

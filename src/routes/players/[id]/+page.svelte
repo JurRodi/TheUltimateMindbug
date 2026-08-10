@@ -7,6 +7,7 @@
 
 	const chart = $derived([
 		{ label: 'Total', color: 'var(--teal)', points: data.series.total },
+		{ label: '1v1', color: 'var(--coral)', points: data.series['1v1'] },
 		{ label: '2v2', color: 'var(--pink)', points: data.series['2v2'] },
 		{ label: '3v3', color: 'var(--gold)', points: data.series['3v3'] }
 	]);
@@ -15,6 +16,7 @@
 
 	const tiles: { label: string; key: Track; cls: string }[] = [
 		{ label: 'Total', key: 'total', cls: 't1' },
+		{ label: '1v1', key: '1v1', cls: 't4' },
 		{ label: '2v2', key: '2v2', cls: 't2' },
 		{ label: '3v3', key: '3v3', cls: 't3' }
 	];
@@ -187,12 +189,17 @@
 		font-weight: 800;
 	}
 
-	/* Track tiles */
+	/* Track tiles: 2×2 on phones, 4-up on wider screens. */
 	.tiles {
 		display: grid;
-		grid-template-columns: repeat(3, 1fr);
+		grid-template-columns: repeat(2, 1fr);
 		gap: 0.6rem;
 		margin-top: 0.6rem;
+	}
+	@media (min-width: 560px) {
+		.tiles {
+			grid-template-columns: repeat(4, 1fr);
+		}
 	}
 	.tile {
 		display: grid;
@@ -220,6 +227,9 @@
 	}
 	.tile.t3 .v {
 		color: var(--gold);
+	}
+	.tile.t4 .v {
+		color: var(--coral);
 	}
 	.tile .wr {
 		font-size: 0.72rem;
