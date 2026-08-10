@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { teamStats } from './teams';
+import { teamStats, teamGameLog, teamNetSeries, teamStreak } from './teams';
 import type { GameInput } from '$lib/types';
 
 const NOW = new Date('2026-02-01T12:00:00Z');
@@ -48,5 +48,47 @@ describe('teamStats', () => {
 				prev.games > cur.games || (prev.games === cur.games && prev.winRate >= cur.winRate)
 			).toBe(true);
 		}
+	});
+});
+
+describe('team history helpers', () => {
+	it('teamNetSeries walks running net oldest-first', () => {
+		// [1,2]: game1 W (+1), game2 L (0)
+		expect(teamNetSeries(games, [2, 1])).toEqual([
+			{ playedAt: '2026-01-01T10:00:00Z', net: 1 },
+			{ playedAt: '2026-01-02T10:00:00Z', net: 0 }
+		]);
+	});
+
+	it('teamGameLog returns newest-first with netAfter and opponents', () => {
+		const log = teamGameLog(games, [1, 2]);
+		expect(log.map((e) => e.gameId)).toEqual([2, 1]);
+		expect(log[0]).toMatchObject({ won: false, netAfter: 0, opponentIds: [3, 4] });
+		expect(log[1]).toMatchObject({ won: true, netAfter: 1, opponentIds: [3, 4] });
+	});
+
+	it('matches on the exact lineup, not a superset', () => {
+		const extra: GameInput[] = [
+			...games,
+			{
+				id: 3,
+				playedAt: '2026-01-03T10:00:00Z',
+				format: '3v3',
+				winnerSide: 'A',
+				sideA: [1, 2, 5],
+				sideB: [3, 4, 6]
+			}
+		];
+		// [1,2] (2-player team) must NOT pick up the 3-player game
+		expect(teamGameLog(extra, [1, 2]).map((e) => e.gameId)).toEqual([2, 1]);
+		expect(teamGameLog(extra, [1, 2, 5]).map((e) => e.gameId)).toEqual([3]);
+	});
+
+	it('teamStreak is signed from the most recent games', () => {
+		// [1,2]: game1 W, game2 L -> current streak -1
+		expect(teamStreak(games, [1, 2])).toBe(-1);
+		// [3,4]: game1 L, game2 W -> current streak +1
+		expect(teamStreak(games, [3, 4])).toBe(1);
+		expect(teamStreak(games, [9, 9])).toBe(0);
 	});
 });
