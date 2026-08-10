@@ -7,15 +7,25 @@ import { weekSummary } from '$lib/stats/summary';
 import type { Track, DateRange } from '$lib/types';
 import type { PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ url }) => {
-	// Clamp query params to known values so a bad/stale URL never 500s the
-	// home page — anything unrecognized falls back to the default.
-	const viewParam = url.searchParams.get('view');
+export const load: PageServerLoad = async ({ url, cookies }) => {
+	// The board's view/format/range are sticky: the URL wins when present, else
+	// we fall back to the last selection saved in a cookie, else the default.
+	// This keeps the filter stateful when returning to the board from a detail
+	// page (whose back-link points at a bare `/`) or the nav "Board" link.
+	// Anything unrecognized clamps to the default so a bad/stale value never 500s.
+	const [savedView, savedFormat, savedRange] = (cookies.get('mb_board') ?? '').split('|');
+	const viewParam = url.searchParams.get('view') ?? savedView;
 	const view: 'players' | 'teams' = viewParam === 'teams' ? 'teams' : 'players';
-	const formatParam = url.searchParams.get('format');
+	const formatParam = url.searchParams.get('format') ?? savedFormat;
 	const format: Track = formatParam === '2v2' || formatParam === '3v3' ? formatParam : 'total';
-	const rangeParam = url.searchParams.get('range');
+	const rangeParam = url.searchParams.get('range') ?? savedRange;
 	const range: DateRange = rangeParam === 'week' || rangeParam === 'month' ? rangeParam : 'all';
+	cookies.set('mb_board', `${view}|${format}|${range}`, {
+		path: '/',
+		httpOnly: true,
+		sameSite: 'lax',
+		maxAge: 60 * 60 * 24 * 365
+	});
 	const now = new Date();
 
 	const [players, games] = await Promise.all([getPlayers(db), getAllGames(db)]);

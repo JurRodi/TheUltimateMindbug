@@ -1,16 +1,16 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { page } from '$app/state';
 	let { view, format, range }: { view: string; format: string; range: string } = $props();
 
 	function setParam(key: string, value: string) {
-		const url = new URL(page.url);
-		url.searchParams.set(key, value);
-		// This component only renders on the home route ("/"); resolving against
-		// that literal route id satisfies svelte/no-navigation-without-resolve
-		// while preserving the same query-param-only navigation.
-		goto(resolve(`/?${url.searchParams.toString()}`), {
+		// Always emit all three params (current values + the one being changed) so
+		// the board URL stays complete and shareable, and the server persists the
+		// full selection. This component only renders on the home route ("/"), so
+		// resolving against that literal route id satisfies
+		// svelte/no-navigation-without-resolve while keeping query-param-only nav.
+		const qs = new URLSearchParams({ view, format, range, [key]: value }).toString();
+		goto(resolve(`/?${qs}`), {
 			replaceState: true,
 			keepFocus: true,
 			noScroll: true
