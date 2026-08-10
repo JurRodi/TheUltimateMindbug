@@ -45,7 +45,7 @@
 			power: pct(t.winRate),
 			powerLabel: 'WIN%',
 			chips: teamChips(t),
-			href: null
+			href: resolve('/teams/[id]', { id: t.playerIds.join('-') })
 		}))
 	);
 	const teamRest = $derived(data.teams.slice(3));
@@ -78,6 +78,7 @@
 								chips={teamChips(t)}
 								power={pct(t.winRate)}
 								powerLabel="WIN%"
+								href={resolve('/teams/[id]', { id: t.playerIds.join('-') })}
 							/>
 						{/each}
 					</div>
