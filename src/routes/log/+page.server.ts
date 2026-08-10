@@ -38,6 +38,6 @@ export const actions: Actions = {
 			sideA,
 			sideB
 		});
-		throw redirect(303, '/');
+		throw redirect(303, '/?saved=game');
 	}
 };

@@ -2,9 +2,25 @@
 	import BoardFilters from '$lib/components/BoardFilters.svelte';
 	import Podium from '$lib/components/Podium.svelte';
 	import CreatureTile from '$lib/components/CreatureTile.svelte';
+	import Toast from '$lib/components/Toast.svelte';
 	import { creatureFor } from '$lib/creatures';
 	import { resolve } from '$app/paths';
+	import { page } from '$app/state';
+	import { replaceState } from '$app/navigation';
 	let { data } = $props();
+
+	// Success confirmation after logging a game (the log form redirects here with
+	// ?saved=game). Show a toast once, then strip the param so a refresh is clean.
+	let toast = $state<string | null>(null);
+	$effect(() => {
+		if (page.url.searchParams.get('saved') === 'game') {
+			toast = 'Game saved ✓';
+			const u = new URL(page.url);
+			u.searchParams.delete('saved');
+			const rest = u.searchParams.toString();
+			replaceState(resolve(rest ? `/?${rest}` : '/'), {});
+		}
+	});
 
 	const pct = (w: number) => `${Math.round(w * 100)}%`;
 	const streakChip = (s: number) =>
@@ -56,6 +72,8 @@
 	const champStreak = (s: number) => (s > 0 ? `W${s} 🔥` : s < 0 ? `L${-s}` : '–');
 	const deltaText = (d: number) => (d > 0 ? `▲ ${d}` : d < 0 ? `▼ ${-d}` : '–');
 </script>
+
+{#if toast}<Toast message={toast} ondone={() => (toast = null)} />{/if}
 
 <h1>The Ultimate Mindbug 🐛</h1>
 

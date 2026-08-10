@@ -94,6 +94,10 @@
 		text-decoration: none;
 		font-size: 0.85rem;
 		font-weight: 700;
+		transition: opacity 0.15s ease;
+	}
+	.backlink:hover {
+		text-decoration: underline;
 	}
 	h2 {
 		font-size: 1.05rem;
@@ -208,6 +212,13 @@
 		background: var(--surface-2);
 		border-radius: 999px;
 		padding: 0.2rem 0.6rem 0.2rem 0.3rem;
+		transition:
+			transform 0.12s ease,
+			filter 0.12s ease;
+	}
+	.pchip:hover {
+		transform: translateY(-1px);
+		filter: brightness(0.97);
 	}
 	.pchip .em {
 		font-size: 1rem;
@@ -237,6 +248,13 @@
 		color: var(--muted);
 		border-radius: 999px;
 		padding: 0.3rem 0.7rem;
+		transition:
+			background 0.15s ease,
+			color 0.15s ease;
+	}
+	.viewall:hover {
+		background: #dcc79b;
+		color: var(--ink);
 	}
 	.log {
 		display: flex;

@@ -110,6 +110,10 @@
 		text-decoration: none;
 		font-size: 0.85rem;
 		font-weight: 700;
+		transition: opacity 0.15s ease;
+	}
+	.backlink:hover {
+		text-decoration: underline;
 	}
 	h2 {
 		font-size: 1.05rem;
@@ -254,6 +258,13 @@
 		color: var(--muted);
 		border-radius: 999px;
 		padding: 0.3rem 0.7rem;
+		transition:
+			background 0.15s ease,
+			color 0.15s ease;
+	}
+	.viewall:hover {
+		background: #dcc79b;
+		color: var(--ink);
 	}
 	.log {
 		display: flex;
