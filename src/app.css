@@ -69,6 +69,15 @@ h3 {
 	line-height: 1.1;
 	color: var(--gold-2);
 }
+/* Page titles: 28px on mobile, 32px on desktop. */
+h1 {
+	font-size: 28px;
+}
+@media (min-width: 640px) {
+	h1 {
+		font-size: 32px;
+	}
+}
 
 a {
 	color: var(--teal);

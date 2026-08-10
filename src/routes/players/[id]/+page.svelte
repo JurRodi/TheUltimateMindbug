@@ -170,7 +170,6 @@
 	.hero h1 {
 		margin: 0;
 		color: var(--ink);
-		font-size: 1.6rem;
 	}
 	.rank {
 		color: var(--muted);
