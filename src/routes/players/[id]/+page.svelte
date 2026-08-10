@@ -1,5 +1,6 @@
 <script lang="ts">
 	import RatingChart from '$lib/components/RatingChart.svelte';
+	import GameLogRow from '$lib/components/GameLogRow.svelte';
 	import { resolve } from '$app/paths';
 	import type { Track } from '$lib/types';
 	let { data } = $props();
@@ -20,9 +21,6 @@
 
 	const overall = $derived(data.stats.total);
 	const streakText = (s: number) => (s > 0 ? `W${s} 🔥` : s < 0 ? `L${-s}` : '–');
-
-	const fmtDate = (iso: string) =>
-		new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
 	// Recent games: 5 by default, "View all" expands to the full history.
 	let expanded = $state(false);
@@ -92,35 +90,16 @@
 	</div>
 	<div class="log">
 		{#each shown as g (g.gameId)}
-			<div class="card row">
-				<div class="res {g.won ? 'w' : 'l'}">{g.won ? 'W' : 'L'}</div>
-				<div class="mid">
-					<div class="line1">
-						<span class="fmt">{g.format}</span><span class="date">{fmtDate(g.playedAt)}</span>
-					</div>
-					<div class="teams">
-						<span class="teamgrp {g.won ? 'win good' : ''}">
-							<a class="pchip you" href={resolve('/players/[id]', { id: String(data.player.id) })}
-								><span class="em">{data.avatar}</span>{data.player.name}</a
-							>
-							{#each g.teammates as p (p.id)}
-								<a class="pchip" href={resolve('/players/[id]', { id: String(p.id) })}
-									><span class="em">{p.emoji}</span>{p.name}</a
-								>
-							{/each}
-						</span>
-						<span class="vs">vs</span>
-						<span class="teamgrp {g.won ? '' : 'win bad'}">
-							{#each g.opponents as p (p.id)}
-								<a class="pchip" href={resolve('/players/[id]', { id: String(p.id) })}
-									><span class="em">{p.emoji}</span>{p.name}</a
-								>
-							{/each}
-						</span>
-					</div>
-				</div>
-				<div class="delta {g.delta >= 0 ? 'up' : 'down'}">{g.delta >= 0 ? '+' : ''}{g.delta}</div>
-			</div>
+			<GameLogRow
+				won={g.won}
+				format={g.format}
+				playedAt={g.playedAt}
+				us={[{ id: data.player.id, name: data.player.name, emoji: data.avatar }, ...g.teammates]}
+				opponents={g.opponents}
+				youId={data.player.id}
+				valueText={`${g.delta >= 0 ? '+' : ''}${g.delta}`}
+				valueUp={g.delta >= 0}
+			/>
 		{/each}
 	</div>
 {/if}
@@ -281,120 +260,5 @@
 		flex-direction: column;
 		gap: 0.5rem;
 		margin-top: 0.4rem;
-	}
-	.row {
-		display: grid;
-		grid-template-columns: auto 1fr auto;
-		align-items: center;
-		gap: 0.7rem;
-		padding: 0.6rem 0.7rem;
-	}
-	.res {
-		width: 30px;
-		height: 30px;
-		flex: 0 0 auto;
-		border-radius: 9px;
-		display: grid;
-		place-items: center;
-		font-family: var(--display);
-		font-weight: 800;
-		font-size: 0.9rem;
-	}
-	.res.w {
-		background: #d7efe0;
-		color: var(--up);
-	}
-	.res.l {
-		background: #f6ddd4;
-		color: var(--down);
-	}
-	.mid {
-		min-width: 0;
-	}
-	.line1 {
-		display: flex;
-		align-items: center;
-		gap: 0.4rem;
-		flex-wrap: wrap;
-	}
-	.fmt {
-		font-size: 0.62rem;
-		font-weight: 800;
-		letter-spacing: 0.05em;
-		padding: 0.08rem 0.4rem;
-		border-radius: 6px;
-		background: var(--surface-2);
-		color: var(--muted);
-	}
-	.date {
-		font-size: 0.72rem;
-		color: var(--muted);
-		font-weight: 700;
-	}
-	.teams {
-		display: flex;
-		align-items: center;
-		gap: 0.4rem;
-		flex-wrap: wrap;
-		margin-top: 0.3rem;
-	}
-	.teamgrp {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.25rem;
-		flex-wrap: wrap;
-		padding: 0.2rem 0.3rem;
-		border-radius: 9px;
-		border: 1.5px solid transparent;
-	}
-	.teamgrp.win.good {
-		background: rgba(15, 143, 106, 0.14);
-		border-color: rgba(15, 143, 106, 0.5);
-	}
-	.teamgrp.win.bad {
-		background: rgba(214, 74, 55, 0.13);
-		border-color: rgba(214, 74, 55, 0.5);
-	}
-	.pchip {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.25rem;
-		font-size: 0.74rem;
-		font-weight: 700;
-		color: var(--ink);
-		text-decoration: none;
-		background: var(--surface-2);
-		border-radius: 999px;
-		padding: 0.1rem 0.5rem 0.1rem 0.28rem;
-		border: 1.5px solid transparent;
-	}
-	.pchip .em {
-		font-size: 0.9rem;
-		line-height: 1;
-	}
-	.pchip.you {
-		background: var(--gold-2);
-		border-color: var(--gold);
-		font-weight: 800;
-	}
-	.vs {
-		font-family: var(--display);
-		font-size: 0.7rem;
-		font-weight: 800;
-		color: var(--muted);
-		letter-spacing: 0.05em;
-	}
-	.delta {
-		font-family: var(--display);
-		font-weight: 800;
-		font-size: 1rem;
-		font-variant-numeric: tabular-nums;
-		text-align: right;
-	}
-	.delta.up {
-		color: var(--up);
-	}
-	.delta.down {
-		color: var(--down);
 	}
 </style>

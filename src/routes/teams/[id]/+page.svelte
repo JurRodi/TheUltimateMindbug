@@ -1,13 +1,12 @@
 <script lang="ts">
 	import TeamRecordChart from '$lib/components/TeamRecordChart.svelte';
+	import GameLogRow from '$lib/components/GameLogRow.svelte';
 	import { resolve } from '$app/paths';
 	let { data } = $props();
 
 	const pct = (w: number) => `${Math.round(w * 100)}%`;
 	const streakText = (s: number) => (s > 0 ? `W${s} 🔥` : s < 0 ? `L${-s}` : '–');
 	const signed = (n: number) => (n > 0 ? `+${n}` : `${n}`);
-	const fmtDate = (iso: string) =>
-		new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
 	let expanded = $state(false);
 	const shown = $derived(expanded ? data.history : data.history.slice(0, 5));
@@ -76,28 +75,15 @@
 	</div>
 	<div class="log">
 		{#each shown as g (g.gameId)}
-			<div class="card row">
-				<div class="res {g.won ? 'w' : 'l'}">{g.won ? 'W' : 'L'}</div>
-				<div class="mid">
-					<div class="line1">
-						<span class="fmt">{g.format}</span><span class="date">{fmtDate(g.playedAt)}</span>
-					</div>
-					<div class="teams">
-						<span class="teamgrp us {g.won ? 'good' : 'bad'}">
-							{#each data.members as m (m.id)}<span class="em">{m.emoji}</span>{/each}
-						</span>
-						<span class="vs">vs</span>
-						<span class="teamgrp">
-							{#each g.opponents as p (p.id)}
-								<a class="pchip sm" href={resolve('/players/[id]', { id: String(p.id) })}
-									><span class="em">{p.emoji}</span>{p.name}</a
-								>
-							{/each}
-						</span>
-					</div>
-				</div>
-				<div class="net {g.netAfter >= 0 ? 'up' : 'down'}">{signed(g.netAfter)}</div>
-			</div>
+			<GameLogRow
+				won={g.won}
+				format={g.format}
+				playedAt={g.playedAt}
+				us={data.members}
+				opponents={g.opponents}
+				valueText={signed(g.netAfter)}
+				valueUp={g.netAfter >= 0}
+			/>
 		{/each}
 	</div>
 {/if}
@@ -132,14 +118,16 @@
 		justify-content: center;
 	}
 	.herocluster .av {
-		width: 54px;
-		height: 54px;
+		/* Sized so a 3-member cluster (3·46 − 2·12 = 114px) fits inside the 128px
+		   frame without overflowing; a 2-member line-up centres in the same frame. */
+		width: 46px;
+		height: 46px;
 		border-radius: 50%;
 		background: #fbf4e2;
 		border: 2px solid var(--edge);
 		display: grid;
 		place-items: center;
-		font-size: 1.9rem;
+		font-size: 1.6rem;
 		margin-left: -12px;
 		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 	}
@@ -221,11 +209,6 @@
 		border-radius: 999px;
 		padding: 0.2rem 0.6rem 0.2rem 0.3rem;
 	}
-	.pchip.sm {
-		font-size: 0.74rem;
-		font-weight: 700;
-		padding: 0.1rem 0.5rem 0.1rem 0.28rem;
-	}
 	.pchip .em {
 		font-size: 1rem;
 		line-height: 1;
@@ -260,102 +243,5 @@
 		flex-direction: column;
 		gap: 0.5rem;
 		margin-top: 0.4rem;
-	}
-	.row {
-		display: grid;
-		grid-template-columns: auto 1fr auto;
-		align-items: center;
-		gap: 0.7rem;
-		padding: 0.6rem 0.7rem;
-	}
-	.res {
-		width: 30px;
-		height: 30px;
-		flex: 0 0 auto;
-		border-radius: 9px;
-		display: grid;
-		place-items: center;
-		font-family: var(--display);
-		font-weight: 800;
-		font-size: 0.9rem;
-	}
-	.res.w {
-		background: #d7efe0;
-		color: var(--up);
-	}
-	.res.l {
-		background: #f6ddd4;
-		color: var(--down);
-	}
-	.mid {
-		min-width: 0;
-	}
-	.line1 {
-		display: flex;
-		align-items: center;
-		gap: 0.4rem;
-		flex-wrap: wrap;
-	}
-	.fmt {
-		font-size: 0.62rem;
-		font-weight: 800;
-		letter-spacing: 0.05em;
-		padding: 0.08rem 0.4rem;
-		border-radius: 6px;
-		background: var(--surface-2);
-		color: var(--muted);
-	}
-	.date {
-		font-size: 0.72rem;
-		color: var(--muted);
-		font-weight: 700;
-	}
-	.teams {
-		display: flex;
-		align-items: center;
-		gap: 0.4rem;
-		flex-wrap: wrap;
-		margin-top: 0.3rem;
-	}
-	.teamgrp {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.25rem;
-		flex-wrap: wrap;
-		padding: 0.2rem 0.3rem;
-		border-radius: 9px;
-		border: 1.5px solid transparent;
-	}
-	.teamgrp .em {
-		font-size: 0.95rem;
-		line-height: 1;
-	}
-	.teamgrp.us.good {
-		background: rgba(15, 143, 106, 0.14);
-		border-color: rgba(15, 143, 106, 0.5);
-	}
-	.teamgrp.us.bad {
-		background: rgba(214, 74, 55, 0.13);
-		border-color: rgba(214, 74, 55, 0.5);
-	}
-	.vs {
-		font-family: var(--display);
-		font-size: 0.7rem;
-		font-weight: 800;
-		color: var(--muted);
-		letter-spacing: 0.05em;
-	}
-	.net {
-		font-family: var(--display);
-		font-weight: 800;
-		font-size: 1rem;
-		font-variant-numeric: tabular-nums;
-		text-align: right;
-	}
-	.net.up {
-		color: var(--up);
-	}
-	.net.down {
-		color: var(--down);
 	}
 </style>
