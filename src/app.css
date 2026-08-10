@@ -242,3 +242,10 @@ a {
 		padding-bottom: 2rem;
 	}
 }
+
+/* The board's two-column layout needs more room than the reading-width pages. */
+@media (min-width: 1080px) {
+	.wrap.wide {
+		max-width: 1040px;
+	}
+}
