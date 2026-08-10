@@ -39,11 +39,15 @@
 			{#if data.rank}<span class="rank">#{data.rank} of {data.rankTotal}</span>{/if}
 		</div>
 		<div class="statrow">
-			<div class="stat"><span class="n">{cur(data.series.total)}</span><span class="l">Rating</span></div>
+			<div class="stat">
+				<span class="n">{cur(data.series.total)}</span><span class="l">Rating</span>
+			</div>
 			<div class="stat">
 				<span class="n">{overall.wins}–{overall.losses}</span><span class="l">Record</span>
 			</div>
-			<div class="stat"><span class="n">{pct(overall.winRate)}</span><span class="l">Win rate</span></div>
+			<div class="stat">
+				<span class="n">{pct(overall.winRate)}</span><span class="l">Win rate</span>
+			</div>
 			<div class="stat"><span class="n">{overall.games}</span><span class="l">Games</span></div>
 			{#if overall.games > 0}
 				<span class="chip {overall.streak > 0 ? 'w' : overall.streak < 0 ? 'l' : 'none'}"
@@ -77,7 +81,8 @@
 {:else}
 	<div class="games-head">
 		<span class="count">
-			{#if expanded}All {data.history.length} games{:else}Last {shown.length} of {data.history.length}{/if}
+			{#if expanded}All {data.history.length} games{:else}Last {shown.length} of {data.history
+					.length}{/if}
 		</span>
 		{#if data.history.length > 5}
 			<button class="viewall" onclick={() => (expanded = !expanded)}>
@@ -90,7 +95,9 @@
 			<div class="card row">
 				<div class="res {g.won ? 'w' : 'l'}">{g.won ? 'W' : 'L'}</div>
 				<div class="mid">
-					<div class="line1"><span class="fmt">{g.format}</span><span class="date">{fmtDate(g.playedAt)}</span></div>
+					<div class="line1">
+						<span class="fmt">{g.format}</span><span class="date">{fmtDate(g.playedAt)}</span>
+					</div>
 					<div class="teams">
 						<span class="teamgrp {g.won ? 'win good' : ''}">
 							<a class="pchip you" href={resolve('/players/[id]', { id: String(data.player.id) })}

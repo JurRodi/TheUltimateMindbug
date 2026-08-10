@@ -25,6 +25,9 @@
 	--onmat-muted: #9fd0ca;
 	/* misc */
 	--gold-grad: linear-gradient(160deg, #ecc25a, #dfa528);
+	/* primary action (save / add / unlock) — a positive green, replaces coral */
+	--go: #16a37b;
+	--go-grad: linear-gradient(160deg, #1fbf8f, #0f8f6a);
 	--radius: 16px;
 	--radius-sm: 11px;
 	--display: 'Poppins', 'Century Gothic', system-ui, sans-serif;
@@ -87,11 +90,16 @@ a {
 	border: none;
 	border-radius: var(--radius-sm);
 	padding: 0.7rem 1.1rem;
-	background: var(--coral);
+	background: var(--go-grad);
 	color: #fff;
 	cursor: pointer;
 	font-weight: 800;
 	font-size: 0.95rem;
+	box-shadow: 0 4px 0 rgba(0, 0, 0, 0.22);
+}
+.btn:active {
+	transform: translateY(1px);
+	box-shadow: 0 3px 0 rgba(0, 0, 0, 0.22);
 }
 .btn.secondary {
 	background: #e7d6ad;

@@ -35,8 +35,13 @@
 <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Rating over time">
 	{#each ticks as t (t)}
 		<line x1={L} y1={y(t)} x2={W - R} y2={y(t)} stroke="var(--line-card)" stroke-width="1" />
-		<text x={L - 8} y={y(t) + 4} text-anchor="end" fill="var(--muted)" font-size="11" font-weight="700"
-			>{t}</text
+		<text
+			x={L - 8}
+			y={y(t) + 4}
+			text-anchor="end"
+			fill="var(--muted)"
+			font-size="11"
+			font-weight="700">{t}</text
 		>
 	{/each}
 
@@ -71,8 +76,13 @@
 	{/each}
 
 	{#if drawn.length === 0}
-		<text x={W / 2} y={H / 2} text-anchor="middle" fill="var(--muted)" font-size="13" font-weight="700"
-			>No rating history yet</text
+		<text
+			x={W / 2}
+			y={H / 2}
+			text-anchor="middle"
+			fill="var(--muted)"
+			font-size="13"
+			font-weight="700">No rating history yet</text
 		>
 	{/if}
 </svg>
