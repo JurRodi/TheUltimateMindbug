@@ -92,3 +92,21 @@ describe('team history helpers', () => {
 		expect(teamStreak(games, [9, 9])).toBe(0);
 	});
 });
+
+describe('teamStats ignores solo (1v1) sides', () => {
+	it('never produces a one-player team', () => {
+		const withSolo: GameInput[] = [
+			...games,
+			{
+				id: 3,
+				playedAt: '2026-01-03T10:00:00Z',
+				format: '1v1',
+				winnerSide: 'A',
+				sideA: [1],
+				sideB: [2]
+			}
+		];
+		const rows = teamStats(withSolo, { track: 'total', range: 'all', now: NOW });
+		expect(rows.every((r) => r.playerIds.length >= 2)).toBe(true);
+	});
+});

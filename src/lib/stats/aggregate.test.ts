@@ -52,6 +52,28 @@ describe('filterGames', () => {
 			filterGames(games, { track: 'total', range: 'month', now: NOW }).map((g) => g.id)
 		).toEqual([2, 3]);
 	});
+
+	it('selects only 1v1 games on the 1v1 track', () => {
+		const gs: GameInput[] = [
+			{
+				id: 1,
+				playedAt: '2026-01-01T10:00:00Z',
+				format: '1v1',
+				winnerSide: 'A',
+				sideA: [1],
+				sideB: [2]
+			},
+			{
+				id: 2,
+				playedAt: '2026-01-02T10:00:00Z',
+				format: '2v2',
+				winnerSide: 'A',
+				sideA: [1, 3],
+				sideB: [2, 4]
+			}
+		];
+		expect(filterGames(gs, { track: '1v1', range: 'all', now: NOW }).map((x) => x.id)).toEqual([1]);
+	});
 });
 
 describe('playerStats', () => {

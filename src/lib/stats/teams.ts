@@ -23,8 +23,9 @@ export function teamStats(games: GameInput[], opts: StatsOpts): TeamRecord[] {
 	};
 
 	for (const g of filterGames(games, opts)) {
-		record(g.sideA, g.winnerSide === 'A');
-		record(g.sideB, g.winnerSide === 'B');
+		// Skip solo (1v1) sides — a team is a ≥2-player lineup.
+		if (g.sideA.length >= 2) record(g.sideA, g.winnerSide === 'A');
+		if (g.sideB.length >= 2) record(g.sideB, g.winnerSide === 'B');
 	}
 
 	return [...acc.values()]
