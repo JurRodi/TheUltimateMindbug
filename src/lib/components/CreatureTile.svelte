@@ -3,6 +3,7 @@
 	let {
 		rank,
 		emoji,
+		avatars = null,
 		name,
 		chips = [],
 		power,
@@ -11,7 +12,9 @@
 		king = false
 	}: {
 		rank: string | number;
-		emoji: string;
+		emoji?: string;
+		/** Team line-up: renders an overlapping avatar cluster instead of `emoji`. */
+		avatars?: string[] | null;
 		name: string;
 		chips?: Chip[];
 		power: string | number;
@@ -23,7 +26,15 @@
 
 {#snippet inner()}
 	<span class="rankchip">{typeof rank === 'number' ? `#${rank}` : rank}</span>
-	<div class="art" class:gold={king}>{emoji}</div>
+	{#if avatars}
+		<div class="art team">
+			<div class="tcluster">
+				{#each avatars as a, ai (ai)}<span class="av">{a}</span>{/each}
+			</div>
+		</div>
+	{:else}
+		<div class="art" class:gold={king}>{emoji}</div>
+	{/if}
 	<div class="body">
 		<div class="tname">{name}</div>
 		<div class="chips">
@@ -82,6 +93,32 @@
 		height: 58px;
 		flex: none;
 		font-size: 1.7rem;
+	}
+	/* Team line-up: overlapping avatar cluster inside the green art card.
+	   Fixed width fits a 3-player cluster; a 2-player line-up centres in it,
+	   so 2v2 and 3v3 team cards are the same width. */
+	.art.team {
+		width: 84px;
+		padding: 0;
+	}
+	.tcluster {
+		display: flex;
+		align-items: center;
+	}
+	.tcluster .av {
+		width: 30px;
+		height: 30px;
+		border-radius: 50%;
+		background: #fbf4e2;
+		border: 1.5px solid var(--edge);
+		display: grid;
+		place-items: center;
+		font-size: 1.05rem;
+		margin-left: -8px;
+		box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+	}
+	.tcluster .av:first-child {
+		margin-left: 0;
 	}
 	.body {
 		flex: 1;

@@ -1,9 +1,14 @@
 <script lang="ts">
 	type Chip = { text: string; tone?: 'w' | 'l' | 'none' };
+	type Member = { emoji: string; name: string };
 	type Item = {
 		rank: 1 | 2 | 3;
-		emoji: string;
+		/** Single avatar (players). Ignored when `members` is set. */
+		emoji?: string;
+		/** Single name (players) or a fallback joined name. Ignored when `members` is set. */
 		name: string;
+		/** Team line-up: renders an avatar cluster + member names instead of `emoji`/`name`. */
+		members?: Member[];
 		power: string | number;
 		powerLabel?: string;
 		chips?: Chip[];
@@ -25,8 +30,23 @@
 		<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- `href` is caller-supplied (already built via resolve() at the call site, e.g. /players/[id]); this generic podium component just forwards an opaque string prop, so the rule can't see it was resolved. -->
 		<a class="bigcard {pos(it.rank)}" href={it.href ?? undefined}>
 			<span class="medal">{medal(it.rank)}</span>
-			<div class="bart" class:gold={it.rank === 1}>{it.emoji}</div>
-			<div class="bn">{it.name}</div>
+			<div class="bart" class:gold={it.rank === 1}>
+				{#if it.members}
+					<div class="cluster">
+						{#each it.members as m (m.name)}<span class="av">{m.emoji}</span>{/each}
+					</div>
+				{:else}
+					{it.emoji}
+				{/if}
+			</div>
+			{#if it.members}
+				<div class="bn team">
+					{#each it.members as m, mi (m.name)}<span class="mname">{m.name}</span
+						>{#if mi < it.members.length - 1}<span class="plus"> + </span>{/if}{/each}
+				</div>
+			{:else}
+				<div class="bn">{it.name}</div>
+			{/if}
 			<div class="bp">{it.power}<small>{it.powerLabel ?? 'RATING'}</small></div>
 			<div class="chips">
 				{#each it.chips ?? [] as c, ci (ci)}<span class="chip {c.tone ?? ''}">{c.text}</span>{/each}
@@ -75,6 +95,73 @@
 	.bn {
 		font-weight: 800;
 		font-size: 0.9rem;
+	}
+	/* Team line-up: overlapping avatar cluster inside the bart. */
+	.cluster {
+		display: flex;
+		justify-content: center;
+	}
+	.cluster .av {
+		border-radius: 50%;
+		background: #fbf4e2;
+		border: 1.5px solid var(--edge);
+		display: grid;
+		place-items: center;
+		margin-left: -8px;
+		box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+	}
+	.cluster .av:first-child {
+		margin-left: 0;
+	}
+	.p1 .cluster .av {
+		width: 40px;
+		height: 40px;
+		font-size: 1.35rem;
+	}
+	.p2 .cluster .av {
+		width: 34px;
+		height: 34px;
+		font-size: 1.15rem;
+	}
+	.p3 .cluster .av {
+		width: 30px;
+		height: 30px;
+		font-size: 1rem;
+	}
+	.bn.team {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
+		gap: 0 0.15rem;
+	}
+	/* Phones: stack member names and shrink avatars so line-ups fit the columns. */
+	@media (max-width: 520px) {
+		.bn.team {
+			flex-direction: column;
+			gap: 0;
+			line-height: 1.2;
+		}
+		.bn.team .plus {
+			display: none;
+		}
+		.cluster .av {
+			margin-left: -6px;
+		}
+		.p1 .cluster .av {
+			width: 30px;
+			height: 30px;
+			font-size: 1rem;
+		}
+		.p2 .cluster .av {
+			width: 26px;
+			height: 26px;
+			font-size: 0.85rem;
+		}
+		.p3 .cluster .av {
+			width: 24px;
+			height: 24px;
+			font-size: 0.8rem;
+		}
 	}
 	.bp {
 		font-family: var(--display);

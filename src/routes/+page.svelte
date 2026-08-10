@@ -27,6 +27,30 @@
 	);
 	const rest = $derived(data.rows.slice(3));
 
+	// Teams: top-3 podium (avatar clusters) + the rest as cluster tiles.
+	type TeamRow = (typeof data.teams)[number];
+	const teamChips = (t: TeamRow) => [
+		{ text: `${t.games} GP` },
+		{ text: `${t.wins}W`, tone: 'w' as const },
+		{ text: `${t.losses}L`, tone: 'l' as const }
+	];
+	const teamPodium = $derived(
+		data.teams.slice(0, 3).map((t, i) => ({
+			rank: (i + 1) as 1 | 2 | 3,
+			name: t.names.join(' + '),
+			members: t.playerIds.map((id, idx) => ({
+				emoji: creatureFor(id, t.avatars[idx]),
+				name: t.names[idx]
+			})),
+			power: pct(t.winRate),
+			powerLabel: 'WIN%',
+			chips: teamChips(t),
+			href: null
+		}))
+	);
+	const teamRest = $derived(data.teams.slice(3));
+	const topTeam = $derived(data.teams[0] ?? null);
+
 	// Aside cards.
 	const champ = $derived(data.rows[0] ?? null);
 	const champStreak = (s: number) => (s > 0 ? `W${s} 🔥` : s < 0 ? `L${-s}` : '–');
@@ -41,22 +65,59 @@
 	{#if data.teams.length === 0}
 		<p class="card">No games logged yet.</p>
 	{:else}
-		<div class="tiles">
-			{#each data.teams as t, i (t.playerIds.join('-'))}
-				<CreatureTile
-					rank={i + 1}
-					emoji={creatureFor(t.playerIds[0], t.avatars[0])}
-					name={t.names.join(' + ')}
-					chips={[
-						{ text: `${t.games} GP` },
-						{ text: `${t.wins}W`, tone: 'w' },
-						{ text: `${t.losses}L`, tone: 'l' }
-					]}
-					power={pct(t.winRate)}
-					powerLabel="WIN%"
-					king={i === 0}
-				/>
-			{/each}
+		<div class="board-layout">
+			<div class="board-main">
+				<Podium items={teamPodium} />
+				{#if teamRest.length}
+					<div class="tiles">
+						{#each teamRest as t, i (t.playerIds.join('-'))}
+							<CreatureTile
+								rank={i + 4}
+								avatars={t.playerIds.map((id, idx) => creatureFor(id, t.avatars[idx]))}
+								name={t.names.join(' + ')}
+								chips={teamChips(t)}
+								power={pct(t.winRate)}
+								powerLabel="WIN%"
+							/>
+						{/each}
+					</div>
+				{/if}
+			</div>
+
+			<aside class="aside">
+				{#if topTeam}
+					<div class="info grad">
+						<h4>Top team</h4>
+						<div class="big">{topTeam.names.join(' + ')}</div>
+						<div class="row"><span>win rate</span><span>{pct(topTeam.winRate)}</span></div>
+						<div class="row">
+							<span>record</span><span>{topTeam.wins}W · {topTeam.losses}L</span>
+						</div>
+					</div>
+				{/if}
+				<div class="info">
+					<h4>This week</h4>
+					<div class="big">{data.weekly.games}</div>
+					<div class="row">
+						<span>games played</span><span>{deltaText(data.weekly.delta)}</span>
+					</div>
+					<div class="row">
+						<span>biggest climb</span>
+						<span
+							>{data.weekly.climb
+								? `${data.weekly.climb.name} +${data.weekly.climb.gain}`
+								: '–'}</span
+						>
+					</div>
+				</div>
+				<div class="info">
+					<h4>Tile legend</h4>
+					<div class="legend">
+						<span class="chip">40 GP</span> games · <span class="chip w">18W</span> wins ·
+						<span class="chip l">7L</span> losses · <b style="color: #fff">72%</b> win rate
+					</div>
+				</div>
+			</aside>
 		</div>
 	{/if}
 {:else if data.rows.length === 0}
