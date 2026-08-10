@@ -2,18 +2,39 @@
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
 	import { CREATURES, creatureFor } from '$lib/creatures';
+	import Toast from '$lib/components/Toast.svelte';
 	let { data, form } = $props();
 	let avatar = $state(CREATURES[0]);
+
+	let addingSubmitting = $state(false);
+	let togglingId = $state<number | null>(null);
+	let toast = $state<string | null>(null);
 </script>
 
 <h1>Players</h1>
 
+{#if toast}<Toast message={toast} ondone={() => (toast = null)} />{/if}
+
 {#if data.canEdit}
-	<form method="POST" action="?/add" use:enhance class="card add">
+	<form
+		method="POST"
+		action="?/add"
+		use:enhance={() => {
+			addingSubmitting = true;
+			return async ({ result, update }) => {
+				await update();
+				addingSubmitting = false;
+				if (result.type === 'success') toast = 'Player added ✓';
+			};
+		}}
+		class="card add"
+	>
 		<div class="row1">
 			<span class="preview">{avatar}</span>
 			<input name="name" placeholder="New player name" />
-			<button class="btn" type="submit">Add</button>
+			<button class="btn" type="submit" disabled={addingSubmitting}>
+				{#if addingSubmitting}<span class="spin" aria-hidden="true"></span> Adding…{:else}Add{/if}
+			</button>
 		</div>
 		<input type="hidden" name="avatar" value={avatar} />
 		<div class="picker">
@@ -36,12 +57,27 @@
 				<span class="crea">{creatureFor(p.id, p.avatar)}</span>{p.name}
 			</a>
 			{#if data.canEdit}
-				<form method="POST" action="?/toggle" use:enhance>
+				<form
+					method="POST"
+					action="?/toggle"
+					use:enhance={() => {
+						const wasActive = p.isActive;
+						togglingId = p.id;
+						return async ({ result, update }) => {
+							await update();
+							togglingId = null;
+							if (result.type === 'success')
+								toast = wasActive ? 'Player deactivated' : 'Player activated';
+						};
+					}}
+				>
 					<input type="hidden" name="id" value={p.id} />
 					<input type="hidden" name="active" value={(!p.isActive).toString()} />
-					<button class="btn secondary" type="submit"
-						>{p.isActive ? 'Deactivate' : 'Activate'}</button
-					>
+					<button class="btn secondary" type="submit" disabled={togglingId === p.id}>
+						{#if togglingId === p.id}<span class="spin" aria-hidden="true"></span>{:else}{p.isActive
+								? 'Deactivate'
+								: 'Activate'}{/if}
+					</button>
 				</form>
 			{/if}
 		</li>
@@ -89,6 +125,13 @@
 		border-radius: 9px;
 		padding: 0.2rem 0.35rem;
 		cursor: pointer;
+		transition:
+			border-color 0.15s ease,
+			transform 0.1s ease;
+	}
+	.picker button:not(.on):hover {
+		border-color: var(--edge);
+		transform: translateY(-1px);
 	}
 	.picker button.on {
 		border-color: var(--teal);
@@ -112,6 +155,10 @@
 		color: var(--ink);
 		text-decoration: none;
 		font-weight: 700;
+		transition: color 0.15s ease;
+	}
+	li a:hover:not(.inactive) {
+		color: var(--teal);
 	}
 	.crea {
 		font-size: 1.2rem;

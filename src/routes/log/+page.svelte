@@ -21,11 +21,27 @@
 
 	const today = new Date().toISOString().slice(0, 10);
 	let playedAt = $state(today);
+
+	// Every visible slot on both sides must be filled before the game can be saved.
+	const valid = $derived(
+		sideA.slice(0, size).every((v) => v != null) && sideB.slice(0, size).every((v) => v != null)
+	);
+	let submitting = $state(false);
 </script>
 
 <h1>Log a game</h1>
 
-<form method="POST" use:enhance class="card">
+<form
+	method="POST"
+	use:enhance={() => {
+		submitting = true;
+		return async ({ update }) => {
+			await update();
+			submitting = false;
+		};
+	}}
+	class="card"
+>
 	<input type="hidden" name="format" value={format} />
 	<input type="hidden" name="winnerSide" value={winnerSide} />
 
@@ -70,7 +86,9 @@
 	</label>
 
 	{#if form?.error}<p class="err">{form.error}</p>{/if}
-	<button class="btn save" type="submit">💾 Save game</button>
+	<button class="btn save" type="submit" disabled={!valid || submitting}>
+		{#if submitting}<span class="spin" aria-hidden="true"></span> Saving…{:else}💾 Save game{/if}
+	</button>
 </form>
 
 <style>
@@ -98,6 +116,13 @@
 		border-radius: 999px;
 		cursor: pointer;
 		font-size: 0.9rem;
+		transition:
+			background 0.15s ease,
+			color 0.15s ease;
+	}
+	.seg button:not(.on):hover {
+		background: rgba(0, 0, 0, 0.06);
+		color: var(--ink);
 	}
 	.seg button.on {
 		background: var(--teal);

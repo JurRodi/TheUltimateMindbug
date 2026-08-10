@@ -1,12 +1,23 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	let { form } = $props();
+	let submitting = $state(false);
 </script>
 
 <h1>Enter the crew password</h1>
 <p class="muted">You only need this to log games or manage players.</p>
 
-<form method="POST" use:enhance class="card">
+<form
+	method="POST"
+	use:enhance={() => {
+		submitting = true;
+		return async ({ update }) => {
+			await update();
+			submitting = false;
+		};
+	}}
+	class="card"
+>
 	<input
 		type="password"
 		name="password"
@@ -14,7 +25,9 @@
 		autocomplete="current-password"
 	/>
 	{#if form?.error}<p class="err">{form.error}</p>{/if}
-	<button class="btn" type="submit">Unlock</button>
+	<button class="btn" type="submit" disabled={submitting}>
+		{#if submitting}<span class="spin" aria-hidden="true"></span> Unlocking…{:else}Unlock{/if}
+	</button>
 </form>
 
 <style>
