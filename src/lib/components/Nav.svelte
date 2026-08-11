@@ -1,11 +1,15 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	const links = [
+	const base = [
 		{ href: '/', label: 'Board', icon: '📊' },
 		{ href: '/players', label: 'Players', icon: '👾' },
 		{ href: '/log', label: 'Log', icon: '➕' }
 	] as const;
+	const adminLinks = [{ href: '/games', label: 'Games', icon: '🎲' }] as const;
+	// The Games (admin) link appears only for admins; the /games page is itself
+	// requireAdmin-gated, so this is convenience, not the security boundary.
+	const links = $derived(page.data.isAdmin ? [...base, ...adminLinks] : [...base]);
 	const isActive = (href: string) =>
 		href === '/' ? page.url.pathname === '/' : page.url.pathname.startsWith(href);
 </script>
