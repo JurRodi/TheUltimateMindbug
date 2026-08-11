@@ -1,16 +1,16 @@
 import { fail } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import { getPlayers, addPlayer, setPlayerActive } from '$lib/server/db/queries';
-import { isAuthed, requireAuth } from '$lib/server/auth';
+import { isAdmin, requireAdmin } from '$lib/server/auth';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ cookies }) => {
-	return { players: await getPlayers(db), canEdit: isAuthed(cookies) };
+	return { players: await getPlayers(db), canEdit: isAdmin(cookies) };
 };
 
 export const actions: Actions = {
 	add: async ({ request, cookies }) => {
-		requireAuth(cookies);
+		requireAdmin(cookies);
 		const form = await request.formData();
 		const name = String(form.get('name') ?? '').trim();
 		const avatar = String(form.get('avatar') ?? '').trim() || null;
@@ -23,7 +23,7 @@ export const actions: Actions = {
 		return { ok: true };
 	},
 	toggle: async ({ request, cookies }) => {
-		requireAuth(cookies);
+		requireAdmin(cookies);
 		const form = await request.formData();
 		const id = Number(form.get('id'));
 		if (!Number.isInteger(id) || id <= 0) return fail(400, { error: 'Invalid player' });
