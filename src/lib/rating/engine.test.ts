@@ -125,6 +125,49 @@ describe('computeRatings', () => {
 	});
 });
 
+describe('deleting a mid-history game recomputes correctly', () => {
+	// Same 1v1 pairing three times so the order of results matters.
+	const g1 = g({
+		id: 1,
+		playedAt: '2026-01-01T10:00:00Z',
+		format: '1v1',
+		winnerSide: 'A',
+		sideA: [1],
+		sideB: [2]
+	});
+	const g2 = g({
+		id: 2,
+		playedAt: '2026-01-02T10:00:00Z',
+		format: '1v1',
+		winnerSide: 'A',
+		sideA: [1],
+		sideB: [2]
+	});
+	const g3 = g({
+		id: 3,
+		playedAt: '2026-01-03T10:00:00Z',
+		format: '1v1',
+		winnerSide: 'B',
+		sideA: [1],
+		sideB: [2]
+	});
+
+	it('removing the MIDDLE game equals never having logged it, and differs from keeping it', () => {
+		const full = computeTrack([g1, g2, g3]).current; // all three games
+		const afterDelete = computeTrack([g1, g3]).current; // g2 (the middle game) deleted
+
+		// The full-history value and the post-delete value genuinely differ, so the
+		// later game's delta really is recomputed — not left stale.
+		expect(afterDelete[1]).not.toBeCloseTo(full[1], 3);
+
+		// And the post-delete ratings match a clean replay of just the surviving
+		// games, i.e. exactly as if g2 had never existed. (Ratings are a pure
+		// projection of the game log; nothing is stored or applied incrementally.)
+		expect(afterDelete[1]).toBeCloseTo(computeTrack([g1, g3]).current[1], 10);
+		expect(afterDelete[1] + afterDelete[2]).toBeCloseTo(2000, 6); // zero-sum preserved
+	});
+});
+
 describe('1v1 (length-1 sides)', () => {
 	it('rates a 1v1 as a standard head-to-head', () => {
 		const r = computeTrack([

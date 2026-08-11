@@ -6,7 +6,8 @@ import {
 	getPlayer,
 	setPlayerActive,
 	insertGame,
-	getAllGames
+	getAllGames,
+	deleteGame
 } from './queries';
 
 let db: Awaited<ReturnType<typeof makeTestDb>>;
@@ -63,5 +64,22 @@ describe('games', () => {
 			sideA: [a.id, b.id].sort((x, y) => x - y),
 			sideB: [c.id, d.id].sort((x, y) => x - y)
 		});
+	});
+});
+
+describe('deleteGame', () => {
+	it('removes the game (participants cascade)', async () => {
+		const a = await addPlayer(db, 'Ada');
+		const b = await addPlayer(db, 'Bo');
+		const gid = await insertGame(db, {
+			playedAt: '2026-01-01T10:00:00Z',
+			format: '1v1',
+			winnerSide: 'A',
+			sideA: [a.id],
+			sideB: [b.id]
+		});
+		expect((await getAllGames(db)).map((game) => game.id)).toContain(gid);
+		await deleteGame(db, gid);
+		expect((await getAllGames(db)).map((game) => game.id)).not.toContain(gid);
 	});
 });

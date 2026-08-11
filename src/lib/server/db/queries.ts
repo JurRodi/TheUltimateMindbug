@@ -80,6 +80,10 @@ export async function insertGame(
 	return Number(rows[0].id);
 }
 
+export async function deleteGame(db: DB, id: number): Promise<void> {
+	await db.delete(games).where(eq(games.id, id));
+}
+
 export async function getAllGames(db: DB): Promise<GameInput[]> {
 	const gameRows = (await db.select().from(games)) as GameRow[];
 	const participantRows = (await db
