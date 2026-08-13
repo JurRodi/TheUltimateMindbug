@@ -147,6 +147,19 @@
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
+		position: relative;
+		/* Match the leaderboard cards: lift on hover, press down on tap. */
+		transition:
+			transform 0.14s ease,
+			box-shadow 0.14s ease;
+	}
+	li:hover {
+		transform: translateY(-3px);
+		box-shadow: 0 8px 0 rgba(0, 0, 0, 0.28);
+	}
+	li:active {
+		transform: translateY(1px);
+		box-shadow: 0 3px 0 rgba(0, 0, 0, 0.28);
 	}
 	li a {
 		display: inline-flex;
@@ -155,10 +168,19 @@
 		color: var(--ink);
 		text-decoration: none;
 		font-weight: 700;
-		transition: color 0.15s ease;
 	}
-	li a:hover:not(.inactive) {
-		color: var(--teal);
+	/* Stretched link: the whole card is clickable and navigates to the player.
+	   The anchor's ::after overlays the entire card (li is the positioned
+	   ancestor); the action form sits above it via z-index. */
+	li a::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		border-radius: inherit;
+	}
+	li form {
+		position: relative;
+		z-index: 1;
 	}
 	.crea {
 		font-size: 1.2rem;
