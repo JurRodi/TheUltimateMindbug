@@ -118,6 +118,21 @@
 		flex-wrap: wrap;
 		margin-top: 0.3rem;
 	}
+	/* On phones, stack the teams so "vs" sits between them rather than trailing
+	   the first team when the row wraps. */
+	@media (max-width: 560px) {
+		.teams {
+			flex-direction: column;
+			align-items: flex-start;
+			flex-wrap: nowrap;
+			/* Shrink the column to the widest team group so the centered "vs"
+			   lines up over the chips, not the full-width grid cell. */
+			width: fit-content;
+		}
+		.teams .vs {
+			align-self: center;
+		}
+	}
 	.teamgrp {
 		display: inline-flex;
 		align-items: center;
