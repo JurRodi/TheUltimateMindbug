@@ -224,8 +224,32 @@
 	/* Wide screens: leaderboard + a fixed-width aside column. Below this the
 	   aside stacks under the board. */
 	@media (min-width: 1080px) {
+		/* Grow to fill the viewport-height wrap (see .wrap.wide in app.css); the
+		   grid rows stretch so board-main gets a definite height to scroll into. */
 		.board-layout {
 			grid-template-columns: minmax(0, 1fr) 264px;
+			flex: 1;
+			min-height: 0;
+			align-items: stretch;
+		}
+		/* Scroll the whole column — podium and ranking list together — so the aside
+		   (Champion / Top team, This week, legend) stays in view beside it. Once #1
+		   scrolls off, the Champion card still shows who's on top. */
+		.board-main {
+			min-height: 0;
+			overflow-y: auto;
+			padding: 0 0.35rem;
+		}
+		/* Don't let the podium/list get squashed to fit the scroll container —
+		   keep their natural heights (so the podium tiers stay correct) and let
+		   board-main scroll through them instead. */
+		.board-main > :global(.podium),
+		.tiles {
+			flex-shrink: 0;
+		}
+		/* Keep the aside at its natural height, pinned to the top of the row. */
+		.aside {
+			align-self: start;
 		}
 	}
 </style>

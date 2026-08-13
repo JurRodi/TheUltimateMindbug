@@ -260,10 +260,16 @@ a {
 	}
 }
 
-/* The board's two-column layout needs more room than the reading-width pages. */
+/* The board's two-column layout needs more room than the reading-width pages.
+   It also fills the viewport height as a flex column so the board area can grow
+   to whatever space is left below the title + filters — letting the ranking list
+   scroll while the aside stays put, with no hard-coded height offset. */
 @media (min-width: 1080px) {
 	.wrap.wide {
 		max-width: 1040px;
+		height: 100dvh;
+		display: flex;
+		flex-direction: column;
 	}
 }
 
