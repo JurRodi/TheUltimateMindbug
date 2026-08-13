@@ -135,6 +135,7 @@
 						<span class="chip">40 GP</span> games · <span class="chip w">18W</span> wins ·
 						<span class="chip l">7L</span> losses · <b style="color: #fff">72%</b> win rate
 					</div>
+					<p class="rule-note">Teams need 3+ games to rank on win rate.</p>
 				</div>
 			</aside>
 		</div>
@@ -211,6 +212,14 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.7rem;
+	}
+	/* Small side note under the teams tile legend explaining the ranking rule. */
+	.rule-note {
+		margin: 0.5rem 0 0;
+		font-size: 0.66rem;
+		line-height: 1.4;
+		color: var(--onmat-muted);
+		opacity: 0.75;
 	}
 	/* Wide screens: leaderboard + a fixed-width aside column. Below this the
 	   aside stacks under the board. */

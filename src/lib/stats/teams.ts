@@ -10,6 +10,10 @@ export interface TeamRecord {
 	winRate: number;
 }
 
+/** Teams need at least this many games to rank on win rate; fewer sinks to the
+    bottom so a single lucky game can't top the board. */
+export const MIN_RANKED_GAMES = 3;
+
 export function teamStats(games: GameInput[], opts: StatsOpts): TeamRecord[] {
 	const acc = new Map<string, { playerIds: number[]; games: number; wins: number }>();
 
@@ -36,7 +40,14 @@ export function teamStats(games: GameInput[], opts: StatsOpts): TeamRecord[] {
 			losses: e.games - e.wins,
 			winRate: e.games === 0 ? 0 : e.wins / e.games
 		}))
-		.sort((a, b) => (b.games !== a.games ? b.games - a.games : b.winRate - a.winRate));
+		.sort((a, b) => {
+			// Teams below the games threshold sink beneath every qualified team.
+			const aq = a.games >= MIN_RANKED_GAMES;
+			const bq = b.games >= MIN_RANKED_GAMES;
+			if (aq !== bq) return aq ? -1 : 1;
+			// Within a tier, rank by win rate; more games breaks ties.
+			return b.winRate !== a.winRate ? b.winRate - a.winRate : b.games - a.games;
+		});
 }
 
 const keyOf = (ids: number[]) => [...ids].sort((a, b) => a - b).join('-');

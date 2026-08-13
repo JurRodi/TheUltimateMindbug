@@ -39,15 +39,49 @@ describe('teamStats', () => {
 		).toBe(true);
 	});
 
-	it('sorts by games desc then winRate desc', () => {
-		const rows = teamStats(games, { track: 'total', range: 'all', now: NOW });
-		for (let i = 1; i < rows.length; i++) {
-			const prev = rows[i - 1];
-			const cur = rows[i];
-			expect(
-				prev.games > cur.games || (prev.games === cur.games && prev.winRate >= cur.winRate)
-			).toBe(true);
-		}
+	// Build a 2v2 game with a valid, distinct date per id.
+	const mk = (id: number, winnerSide: 'A' | 'B', sideA: number[], sideB: number[]): GameInput => ({
+		id,
+		playedAt: `2026-01-${String(id).padStart(2, '0')}T10:00:00Z`,
+		format: '2v2',
+		winnerSide,
+		sideA,
+		sideB
+	});
+
+	it('ranks by win rate, sinking teams below the games threshold', () => {
+		// [5,6]: 3 wins / 1 loss = 75% over 4 games (qualified).
+		// [7,8]: 1 win / 0 losses = 100% over 1 game (below the 3-game threshold).
+		const g = [
+			mk(1, 'A', [5, 6], [3, 4]), // 5-6 win
+			mk(2, 'A', [5, 6], [3, 4]), // 5-6 win
+			mk(3, 'A', [5, 6], [3, 4]), // 5-6 win
+			mk(4, 'A', [3, 4], [5, 6]), // 5-6 lose -> 3W/1L = 75%
+			mk(5, 'A', [7, 8], [3, 4]) // 7-8 win once -> 100% but only 1 game
+		];
+		const rows = teamStats(g, { track: 'total', range: 'all', now: NOW });
+		const t56 = rows.findIndex((r) => r.playerIds.join('-') === '5-6');
+		const t78 = rows.findIndex((r) => r.playerIds.join('-') === '7-8');
+		expect(rows[t56].winRate).toBeCloseTo(0.75, 6);
+		expect(rows[t78].winRate).toBeCloseTo(1, 6);
+		// The qualified 75% team outranks the sub-threshold 100% team.
+		expect(t56).toBeLessThan(t78);
+	});
+
+	it('ranks two qualified teams by win rate', () => {
+		// [1,2]: 3 wins / 0 losses = 100%. [5,6]: 3 wins / 1 loss = 75%.
+		const g = [
+			mk(1, 'A', [1, 2], [3, 4]),
+			mk(2, 'A', [1, 2], [3, 4]),
+			mk(3, 'A', [1, 2], [3, 4]),
+			mk(4, 'A', [5, 6], [3, 4]),
+			mk(5, 'A', [5, 6], [3, 4]),
+			mk(6, 'A', [5, 6], [3, 4]),
+			mk(7, 'A', [3, 4], [5, 6]) // 5-6 lose -> 3W/1L = 75%
+		];
+		const rows = teamStats(g, { track: 'total', range: 'all', now: NOW });
+		expect(rows[0].playerIds.join('-')).toBe('1-2');
+		expect(rows[0].winRate).toBeCloseTo(1, 6);
 	});
 });
 
