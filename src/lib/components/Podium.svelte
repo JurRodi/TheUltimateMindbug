@@ -88,6 +88,11 @@
 		place-items: center;
 		background: linear-gradient(155deg, #31b7a9, #0e7a74);
 		border: 1.5px solid var(--edge);
+		/* Grow to fill whatever height the name + stats leave in the fixed-height
+		   card (below), so a wrapped name shrinks the bar rather than growing the
+		   card — keeping the podium tier intact regardless of team size. */
+		flex: 1;
+		min-height: 32px;
 	}
 	.bart.gold {
 		background: linear-gradient(155deg, #edca66, #cf9a2c);
@@ -114,19 +119,19 @@
 		margin-left: 0;
 	}
 	.p1 .cluster .av {
-		width: 40px;
-		height: 40px;
-		font-size: 1.35rem;
+		width: 50px;
+		height: 50px;
+		font-size: 1.7rem;
 	}
 	.p2 .cluster .av {
-		width: 34px;
-		height: 34px;
-		font-size: 1.15rem;
+		width: 43px;
+		height: 43px;
+		font-size: 1.45rem;
 	}
 	.p3 .cluster .av {
-		width: 30px;
-		height: 30px;
-		font-size: 1rem;
+		width: 38px;
+		height: 38px;
+		font-size: 1.25rem;
 	}
 	.bn.team {
 		display: flex;
@@ -134,7 +139,9 @@
 		justify-content: center;
 		gap: 0 0.15rem;
 	}
-	/* Phones: stack member names and shrink avatars so line-ups fit the columns. */
+	/* Phones: stack member names and shrink avatars so line-ups fit the columns.
+	   The podium tier itself (fixed heights + flex bar) is defined in the base
+	   rules above and applies at every width. */
 	@media (max-width: 520px) {
 		.bn.team {
 			flex-direction: column;
@@ -182,25 +189,33 @@
 		justify-content: center;
 		gap: 0.28rem;
 	}
+	/* Fixed height per rank → a clear, consistent podium tier at every width,
+	   independent of how many players a team has or how its name wraps; the bar
+	   (flex: 1 above) absorbs the difference. Bottom-aligned via the `.podium`
+	   grid so shorter cards drop to form the steps. */
 	.p1 {
 		border-color: var(--gold);
+		height: 256px;
+	}
+	.p2 {
+		height: 230px;
+	}
+	.p3 {
+		height: 205px;
 	}
 	.p1 .bart {
-		height: 92px;
 		font-size: 2.4rem;
 	}
 	.p1 .bp {
 		font-size: 1.6rem;
 	}
 	.p2 .bart {
-		height: 78px;
 		font-size: 2rem;
 	}
 	.p2 .bp {
 		font-size: 1.35rem;
 	}
 	.p3 .bart {
-		height: 64px;
 		font-size: 1.7rem;
 	}
 	.p3 .bp {
