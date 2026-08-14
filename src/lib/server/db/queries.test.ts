@@ -10,7 +10,8 @@ import {
 	deleteGame,
 	getPlayerByEmail,
 	getPlayersForAdmin,
-	updatePlayerAuth
+	updatePlayerAuth,
+	updatePlayerProfile
 } from './queries';
 
 let db: Awaited<ReturnType<typeof makeTestDb>>;
@@ -90,6 +91,27 @@ describe('player identity queries', () => {
 		const [got] = await getPlayersForAdmin(db);
 		expect(got.email).toBe('sam@x.com');
 		expect(got.isAdmin).toBe(true);
+	});
+
+	it('updatePlayerProfile trims the name and clears a blank avatar', async () => {
+		const db = await makeTestDb();
+		const p = await addPlayer(db, 'Sam', '🦍');
+		await updatePlayerProfile(db, p.id, { name: '  Samuel  ', avatar: '🦊' });
+		let got = await getPlayer(db, p.id);
+		expect(got?.name).toBe('Samuel');
+		expect(got?.avatar).toBe('🦊');
+		// A blank avatar clears back to null (deterministic fallback); email/admin untouched.
+		await updatePlayerProfile(db, p.id, { avatar: '' });
+		got = await getPlayer(db, p.id);
+		expect(got?.avatar).toBeNull();
+		expect(got?.name).toBe('Samuel');
+	});
+
+	it('updatePlayerProfile surfaces a duplicate-name conflict', async () => {
+		const db = await makeTestDb();
+		await addPlayer(db, 'Taken');
+		const p = await addPlayer(db, 'Mine');
+		await expect(updatePlayerProfile(db, p.id, { name: 'Taken' })).rejects.toBeTruthy();
 	});
 });
 

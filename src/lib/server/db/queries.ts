@@ -66,6 +66,21 @@ export async function getPlayerByEmail(db: DB, email: string): Promise<AdminPlay
 	return rows[0] ? toAdminPlayer(rows[0]) : null;
 }
 
+/** Self-service profile edit: a signed-in player changing their own name and/or
+    avatar. Name is trimmed; a blank avatar clears it back to the deterministic
+    fallback (stored as null). The unique `name` constraint surfaces as a thrown
+    error the caller turns into a "name taken" message. */
+export async function updatePlayerProfile(
+	db: DB,
+	id: number,
+	patch: { name?: string; avatar?: string | null }
+): Promise<void> {
+	const set: Partial<typeof players.$inferInsert> = {};
+	if (patch.name !== undefined) set.name = patch.name.trim();
+	if (patch.avatar !== undefined) set.avatar = patch.avatar || null;
+	if (Object.keys(set).length) await db.update(players).set(set).where(eq(players.id, id));
+}
+
 export async function updatePlayerAuth(
 	db: DB,
 	id: number,

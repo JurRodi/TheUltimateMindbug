@@ -1,8 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import { authClient } from '$lib/auth-client';
-	import { goto } from '$app/navigation';
+	import { creatureFor } from '$lib/creatures';
 	const base = [
 		{ href: '/', label: 'Board', icon: '📊' },
 		{ href: '/players', label: 'Players', icon: '👾' },
@@ -20,10 +19,6 @@
 			? page.url.pathname === '/'
 			: page.url.pathname === href || page.url.pathname.startsWith(href + '/');
 	const me = $derived(page.data.me as { id: number; name: string; avatar: string | null } | null);
-	async function logout() {
-		await authClient.signOut();
-		goto(resolve('/'), { invalidateAll: true });
-	}
 </script>
 
 <nav>
@@ -34,9 +29,11 @@
 		</a>
 	{/each}
 	{#if me}
-		<button class="acct" onclick={logout} title="Sign out">
-			<span class="icon">🚪</span><span class="label">Sign out ({me.name})</span>
-		</button>
+		<a class="acct" href={resolve('/account')} class:on={isActive('/account')}>
+			<span class="icon crea">{creatureFor(me.id, me.avatar)}</span><span class="label"
+				>Account</span
+			>
+		</a>
 	{:else}
 		<a class="signin" href={resolve('/login')} class:on={isActive('/login')}>
 			<span class="icon">🔑</span><span class="label">Sign in</span>
@@ -91,29 +88,22 @@
 		color: #2a2014;
 		background: var(--gold-grad);
 	}
-	.acct {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 0.15rem;
-		font-family: var(--display);
-		font-weight: 800;
-		font-size: 0.66rem;
-		text-transform: uppercase;
-		letter-spacing: 0.04em;
-		color: var(--onmat-muted);
-		background: none;
-		border: 0;
-		cursor: pointer;
-		padding: 0.3rem 0.6rem;
-		border-radius: 10px;
-	}
-	.acct .icon {
-		font-size: 1.05rem;
-	}
-	.acct:hover {
-		background: rgba(255, 255, 255, 0.08);
-		color: var(--onmat);
+	/* .acct and .signin are ordinary nav anchors — the base `a` rules above
+	   (layout, hover, and the gold `.on` active state) style them. */
+
+	/* The Account item shows the player's creature in a gold avatar card, like
+	   the hero/player-list avatars. The solid edge border keeps it defined both
+	   on the dark mat (inactive) and on the gold active background. */
+	.acct .crea {
+		display: grid;
+		place-items: center;
+		width: 1.7rem;
+		height: 1.7rem;
+		border-radius: 8px;
+		font-size: 0.95rem;
+		background: linear-gradient(155deg, #edca66, #cf9a2c);
+		border: 1.5px solid var(--edge);
+		box-shadow: inset 0 1px 3px rgba(255, 255, 255, 0.4);
 	}
 
 	@media (min-width: 820px) {
@@ -157,19 +147,13 @@
 		a .icon {
 			font-size: 1.2rem;
 		}
-		.acct {
-			flex-direction: row;
-			justify-content: flex-start;
-			gap: 0.65rem;
-			font-size: 0.95rem;
-			text-transform: none;
-			letter-spacing: 0;
-			padding: 0.68rem 0.8rem;
+		.acct .crea {
+			width: 2rem;
+			height: 2rem;
+			border-radius: 9px;
+			font-size: 1.1rem;
 		}
-		.acct .icon {
-			font-size: 1.2rem;
-		}
-		/* Pin the account affordance (Sign in / Sign out) to the bottom of the
+		/* Pin the account affordance (Account / Sign in) to the bottom of the
 		   full-height sidebar, set apart from the main nav links. */
 		.acct,
 		.signin {
