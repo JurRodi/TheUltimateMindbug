@@ -1,19 +1,19 @@
 import { fail, redirect } from '@sveltejs/kit';
-import { requireAuth } from '$lib/server/auth';
+import { requireAuth } from '$lib/server/authz';
 import { db } from '$lib/server/db';
 import { getPlayers, insertGame } from '$lib/server/db/queries';
 import type { Format, Side } from '$lib/types';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ cookies }) => {
-	requireAuth(cookies);
+export const load: PageServerLoad = async ({ locals }) => {
+	requireAuth(locals.auth);
 	const players = await getPlayers(db);
 	return { players: players.filter((p) => p.isActive) };
 };
 
 export const actions: Actions = {
-	default: async ({ request, cookies }) => {
-		requireAuth(cookies);
+	default: async ({ request, locals }) => {
+		requireAuth(locals.auth);
 		const form = await request.formData();
 		const format = String(form.get('format')) as Format;
 		const winnerSide = String(form.get('winnerSide')) as Side;

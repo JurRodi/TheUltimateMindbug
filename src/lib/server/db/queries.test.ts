@@ -7,7 +7,10 @@ import {
 	setPlayerActive,
 	insertGame,
 	getAllGames,
-	deleteGame
+	deleteGame,
+	getPlayerByEmail,
+	getPlayersForAdmin,
+	updatePlayerAuth
 } from './queries';
 
 let db: Awaited<ReturnType<typeof makeTestDb>>;
@@ -64,6 +67,29 @@ describe('games', () => {
 			sideA: [a.id, b.id].sort((x, y) => x - y),
 			sideB: [c.id, d.id].sort((x, y) => x - y)
 		});
+	});
+});
+
+describe('player identity queries', () => {
+	it('resolves a player by email, case-insensitively', async () => {
+		const db = await makeTestDb();
+		await addPlayer(db, 'Jur', null, 'Jur@Example.com');
+		const hit = await getPlayerByEmail(db, 'jur@example.com');
+		expect(hit?.name).toBe('Jur');
+		expect(hit?.email).toBe('jur@example.com'); // stored lowercased
+		expect(await getPlayerByEmail(db, 'nobody@example.com')).toBeNull();
+	});
+
+	it('updatePlayerAuth sets email and admin independently', async () => {
+		const db = await makeTestDb();
+		const p = await addPlayer(db, 'Sam');
+		expect(p.email).toBeNull();
+		expect(p.isAdmin).toBe(false);
+		await updatePlayerAuth(db, p.id, { email: 'SAM@x.com' });
+		await updatePlayerAuth(db, p.id, { isAdmin: true });
+		const [got] = await getPlayersForAdmin(db);
+		expect(got.email).toBe('sam@x.com');
+		expect(got.isAdmin).toBe(true);
 	});
 });
 

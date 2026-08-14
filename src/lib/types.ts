@@ -25,3 +25,10 @@ export interface Player {
 	/** ISO-8601 timestamp string. */
 	createdAt: string;
 }
+
+/** A player as seen by an admin: includes the login email + admin flag. Never
+    serialize this to a public page — email is admin-only. */
+export interface AdminPlayer extends Player {
+	email: string | null;
+	isAdmin: boolean;
+}

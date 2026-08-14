@@ -3,6 +3,7 @@
 	import { resolve } from '$app/paths';
 	import { CREATURES, creatureFor } from '$lib/creatures';
 	import Toast from '$lib/components/Toast.svelte';
+	import type { AdminPlayer } from '$lib/types';
 	let { data, form } = $props();
 	let avatar = $state(CREATURES[0]);
 
@@ -32,6 +33,7 @@
 		<div class="row1">
 			<span class="preview">{avatar}</span>
 			<input name="name" placeholder="New player name" />
+			<input name="email" type="email" placeholder="Google email (optional)" autocomplete="off" />
 			<button class="btn" type="submit" disabled={addingSubmitting}>
 				{#if addingSubmitting}<span class="spin" aria-hidden="true"></span> Adding…{:else}Add{/if}
 			</button>
@@ -57,6 +59,7 @@
 				<span class="crea">{creatureFor(p.id, p.avatar)}</span>{p.name}
 			</a>
 			{#if data.canEdit}
+				{@const ap = p as AdminPlayer}
 				<form
 					method="POST"
 					action="?/toggle"
@@ -78,6 +81,23 @@
 								? 'Deactivate'
 								: 'Activate'}{/if}
 					</button>
+				</form>
+				<form method="POST" action="?/setEmail" use:enhance class="idform">
+					<input type="hidden" name="id" value={ap.id} />
+					<input name="email" type="email" value={ap.email ?? ''} placeholder="no login yet" />
+					<button class="btn secondary" type="submit">Save email</button>
+				</form>
+				<form
+					method="POST"
+					action="?/setAdmin"
+					use:enhance
+					onsubmit={() => (toast = ap.isAdmin ? 'Admin removed' : 'Admin granted')}
+				>
+					<input type="hidden" name="id" value={ap.id} />
+					<input type="hidden" name="isAdmin" value={(!ap.isAdmin).toString()} />
+					<button class="btn secondary" type="submit"
+						>{ap.isAdmin ? 'Revoke admin' : 'Make admin'}</button
+					>
 				</form>
 			{/if}
 		</li>
@@ -148,6 +168,8 @@
 		justify-content: space-between;
 		align-items: center;
 		position: relative;
+		flex-wrap: wrap;
+		gap: 0.5rem;
 		/* Match the leaderboard cards: lift on hover, press down on tap. */
 		transition:
 			transform 0.14s ease,
@@ -191,5 +213,18 @@
 	}
 	.err {
 		color: var(--danger);
+	}
+	.idform {
+		display: flex;
+		gap: 0.4rem;
+		align-items: center;
+	}
+	.idform input {
+		padding: 0.45rem 0.6rem;
+		border-radius: var(--radius-sm);
+		border: 2px solid var(--surface-2);
+		background: var(--bg);
+		color: var(--ink);
+		max-width: 12rem;
 	}
 </style>

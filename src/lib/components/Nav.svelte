@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
+	import { authClient } from '$lib/auth-client';
+	import { goto } from '$app/navigation';
 	const base = [
 		{ href: '/', label: 'Board', icon: '📊' },
 		{ href: '/players', label: 'Players', icon: '👾' },
@@ -10,8 +12,18 @@
 	// The Games (admin) link appears only for admins; the /games page is itself
 	// requireAdmin-gated, so this is convenience, not the security boundary.
 	const links = $derived(page.data.isAdmin ? [...base, ...adminLinks] : [...base]);
+	// Match on a path boundary, not a bare prefix: a bare `startsWith('/log')`
+	// also matches `/login`, so the Log tab lit up on the sign-in page. Active =
+	// the exact route or a sub-path of it (e.g. Players stays active on /players/3).
 	const isActive = (href: string) =>
-		href === '/' ? page.url.pathname === '/' : page.url.pathname.startsWith(href);
+		href === '/'
+			? page.url.pathname === '/'
+			: page.url.pathname === href || page.url.pathname.startsWith(href + '/');
+	const me = $derived(page.data.me as { id: number; name: string; avatar: string | null } | null);
+	async function logout() {
+		await authClient.signOut();
+		goto(resolve('/'), { invalidateAll: true });
+	}
 </script>
 
 <nav>
@@ -21,6 +33,15 @@
 			<span class="icon">{l.icon}</span><span class="label">{l.label}</span>
 		</a>
 	{/each}
+	{#if me}
+		<button class="acct" onclick={logout} title="Sign out">
+			<span class="icon">🚪</span><span class="label">Sign out ({me.name})</span>
+		</button>
+	{:else}
+		<a class="signin" href={resolve('/login')} class:on={isActive('/login')}>
+			<span class="icon">🔑</span><span class="label">Sign in</span>
+		</a>
+	{/if}
 </nav>
 
 <style>
@@ -70,6 +91,30 @@
 		color: #2a2014;
 		background: var(--gold-grad);
 	}
+	.acct {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.15rem;
+		font-family: var(--display);
+		font-weight: 800;
+		font-size: 0.66rem;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+		color: var(--onmat-muted);
+		background: none;
+		border: 0;
+		cursor: pointer;
+		padding: 0.3rem 0.6rem;
+		border-radius: 10px;
+	}
+	.acct .icon {
+		font-size: 1.05rem;
+	}
+	.acct:hover {
+		background: rgba(255, 255, 255, 0.08);
+		color: var(--onmat);
+	}
 
 	@media (min-width: 820px) {
 		nav {
@@ -111,6 +156,24 @@
 		}
 		a .icon {
 			font-size: 1.2rem;
+		}
+		.acct {
+			flex-direction: row;
+			justify-content: flex-start;
+			gap: 0.65rem;
+			font-size: 0.95rem;
+			text-transform: none;
+			letter-spacing: 0;
+			padding: 0.68rem 0.8rem;
+		}
+		.acct .icon {
+			font-size: 1.2rem;
+		}
+		/* Pin the account affordance (Sign in / Sign out) to the bottom of the
+		   full-height sidebar, set apart from the main nav links. */
+		.acct,
+		.signin {
+			margin-top: auto;
 		}
 	}
 </style>

@@ -15,6 +15,13 @@
       "when": 1786368119053,
       "tag": "0001_cuddly_manta",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1786697593782,
+      "tag": "0002_classy_george_stacy",
+      "breakpoints": true
     }
   ]
 }

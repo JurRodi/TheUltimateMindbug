@@ -1,5 +1,5 @@
 import { fail } from '@sveltejs/kit';
-import { requireAdmin } from '$lib/server/auth';
+import { requireAdmin } from '$lib/server/authz';
 import { db } from '$lib/server/db';
 import { getAllGames, getPlayers, deleteGame } from '$lib/server/db/queries';
 import { creatureFor } from '$lib/creatures';
@@ -8,8 +8,8 @@ import type { Actions, PageServerLoad } from './$types';
 
 const PAGE_SIZE = 12;
 
-export const load: PageServerLoad = async ({ cookies, url }) => {
-	requireAdmin(cookies);
+export const load: PageServerLoad = async ({ locals, url }) => {
+	requireAdmin(locals.auth);
 	const [players, games] = await Promise.all([getPlayers(db), getAllGames(db)]);
 	const nameById = new Map(players.map((p) => [p.id, p.name]));
 	const avatarById = new Map(players.map((p) => [p.id, p.avatar]));
@@ -67,8 +67,8 @@ export const load: PageServerLoad = async ({ cookies, url }) => {
 };
 
 export const actions: Actions = {
-	delete: async ({ request, cookies }) => {
-		requireAdmin(cookies);
+	delete: async ({ request, locals }) => {
+		requireAdmin(locals.auth);
 		const form = await request.formData();
 		const id = Number(form.get('id'));
 		if (!Number.isInteger(id) || id <= 0) return fail(400, { error: 'Invalid game' });

@@ -8,7 +8,9 @@ export const players = pgTable('players', {
 	name: text('name').notNull().unique(),
 	avatar: text('avatar'),
 	isActive: boolean('is_active').notNull().default(true),
-	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
+	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+	email: text('email').unique(),
+	isAdmin: boolean('is_admin').notNull().default(false)
 });
 
 export const games = pgTable('games', {
@@ -29,3 +31,5 @@ export const gameParticipants = pgTable('game_participants', {
 		.references(() => players.id),
 	side: sideEnum('side').notNull()
 });
+
+export * from './auth-schema';

@@ -1,54 +1,30 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
-	let { form } = $props();
+	import { authClient } from '$lib/auth-client';
+	import { page } from '$app/state';
 	let submitting = $state(false);
+
+	async function signIn() {
+		submitting = true;
+		const requested = page.url.searchParams.get('redirectTo');
+		const to =
+			requested && requested.startsWith('/') && !/^\/[\\/]/.test(requested) ? requested : '/';
+		await authClient.signIn.social({ provider: 'google', callbackURL: to });
+	}
 </script>
 
-<h1>Enter the crew password</h1>
-<p class="muted">You only need this to log games or manage players.</p>
+<h1>Sign in</h1>
+<p class="muted">Use the Google account your admin added. New here? Ask an admin to add you.</p>
 
-<form
-	method="POST"
-	use:enhance={() => {
-		submitting = true;
-		return async ({ update }) => {
-			await update();
-			submitting = false;
-		};
-	}}
-	class="card"
->
-	<input
-		type="password"
-		name="password"
-		placeholder="Shared password"
-		autocomplete="current-password"
-	/>
-	{#if form?.error}<p class="err">{form.error}</p>{/if}
-	<button class="btn" type="submit" disabled={submitting}>
-		{#if submitting}<span class="spin" aria-hidden="true"></span> Unlocking…{:else}Unlock{/if}
-	</button>
-</form>
+<button class="btn" onclick={signIn} disabled={submitting}>
+	{#if submitting}<span class="spin" aria-hidden="true"></span> Redirecting…{:else}Sign in with
+		Google{/if}
+</button>
 
 <style>
-	form {
-		display: grid;
-		gap: 0.8rem;
-		margin-top: 1rem;
-	}
-	input {
-		padding: 0.8rem;
-		border-radius: var(--radius-sm);
-		border: 2px solid var(--surface-2);
-		background: var(--bg);
-		color: var(--ink);
-		font-size: 1rem;
-	}
 	.muted {
 		color: var(--muted);
 	}
-	.err {
-		color: var(--danger);
-		margin: 0;
+	button {
+		margin-top: 1rem;
 	}
 </style>
