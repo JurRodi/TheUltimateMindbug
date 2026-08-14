@@ -1,7 +1,6 @@
 import { fail } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import {
-	getPlayers,
 	getPlayersForAdmin,
 	addPlayer,
 	setPlayerActive,
@@ -11,8 +10,10 @@ import { requireAdmin } from '$lib/server/authz';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
-	if (locals.auth.isAdmin) return { canEdit: true as const, players: await getPlayersForAdmin(db) };
-	return { canEdit: false as const, players: await getPlayers(db) };
+	// Admin-only management page (like /games). Public player detail lives at
+	// /players/[id]; this list is for creating/editing players.
+	requireAdmin(locals.auth);
+	return { players: await getPlayersForAdmin(db) };
 };
 
 export const actions: Actions = {

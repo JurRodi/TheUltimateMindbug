@@ -3,7 +3,6 @@
 	import { resolve } from '$app/paths';
 	import { CREATURES, creatureFor } from '$lib/creatures';
 	import Toast from '$lib/components/Toast.svelte';
-	import type { AdminPlayer } from '$lib/types';
 	let { data, form } = $props();
 	let avatar = $state(CREATURES[0]);
 
@@ -16,41 +15,35 @@
 
 {#if toast}<Toast message={toast} ondone={() => (toast = null)} />{/if}
 
-{#if data.canEdit}
-	<form
-		method="POST"
-		action="?/add"
-		use:enhance={() => {
-			addingSubmitting = true;
-			return async ({ result, update }) => {
-				await update();
-				addingSubmitting = false;
-				if (result.type === 'success') toast = 'Player added ✓';
-			};
-		}}
-		class="card add"
-	>
-		<div class="row1">
-			<span class="preview">{avatar}</span>
-			<input name="name" placeholder="New player name" />
-			<input name="email" type="email" placeholder="Google email (optional)" autocomplete="off" />
-			<button class="btn" type="submit" disabled={addingSubmitting}>
-				{#if addingSubmitting}<span class="spin" aria-hidden="true"></span> Adding…{:else}Add{/if}
-			</button>
-		</div>
-		<input type="hidden" name="avatar" value={avatar} />
-		<div class="picker">
-			{#each CREATURES as c (c)}
-				<button type="button" class:on={avatar === c} onclick={() => (avatar = c)}>{c}</button>
-			{/each}
-		</div>
-	</form>
-	{#if form?.error}<p class="err">{form.error}</p>{/if}
-{:else}
-	<p class="pill">
-		Viewing only — <a href={resolve('/login?redirectTo=/players')}>unlock</a> to edit.
-	</p>
-{/if}
+<form
+	method="POST"
+	action="?/add"
+	use:enhance={() => {
+		addingSubmitting = true;
+		return async ({ result, update }) => {
+			await update();
+			addingSubmitting = false;
+			if (result.type === 'success') toast = 'Player added ✓';
+		};
+	}}
+	class="card add"
+>
+	<div class="row1">
+		<span class="preview">{avatar}</span>
+		<input name="name" placeholder="New player name" />
+		<input name="email" type="email" placeholder="Google email (optional)" autocomplete="off" />
+		<button class="btn" type="submit" disabled={addingSubmitting}>
+			{#if addingSubmitting}<span class="spin" aria-hidden="true"></span> Adding…{:else}Add{/if}
+		</button>
+	</div>
+	<input type="hidden" name="avatar" value={avatar} />
+	<div class="picker">
+		{#each CREATURES as c (c)}
+			<button type="button" class:on={avatar === c} onclick={() => (avatar = c)}>{c}</button>
+		{/each}
+	</div>
+</form>
+{#if form?.error}<p class="err">{form.error}</p>{/if}
 
 <ul>
 	{#each data.players as p (p.id)}
@@ -58,48 +51,45 @@
 			<a href={resolve('/players/[id]', { id: String(p.id) })} class:inactive={!p.isActive}>
 				<span class="crea">{creatureFor(p.id, p.avatar)}</span>{p.name}
 			</a>
-			{#if data.canEdit}
-				{@const ap = p as AdminPlayer}
-				<form
-					method="POST"
-					action="?/toggle"
-					use:enhance={() => {
-						const wasActive = p.isActive;
-						togglingId = p.id;
-						return async ({ result, update }) => {
-							await update();
-							togglingId = null;
-							if (result.type === 'success')
-								toast = wasActive ? 'Player deactivated' : 'Player activated';
-						};
-					}}
+			<form
+				method="POST"
+				action="?/toggle"
+				use:enhance={() => {
+					const wasActive = p.isActive;
+					togglingId = p.id;
+					return async ({ result, update }) => {
+						await update();
+						togglingId = null;
+						if (result.type === 'success')
+							toast = wasActive ? 'Player deactivated' : 'Player activated';
+					};
+				}}
+			>
+				<input type="hidden" name="id" value={p.id} />
+				<input type="hidden" name="active" value={(!p.isActive).toString()} />
+				<button class="btn secondary" type="submit" disabled={togglingId === p.id}>
+					{#if togglingId === p.id}<span class="spin" aria-hidden="true"></span>{:else}{p.isActive
+							? 'Deactivate'
+							: 'Activate'}{/if}
+				</button>
+			</form>
+			<form method="POST" action="?/setEmail" use:enhance class="idform">
+				<input type="hidden" name="id" value={p.id} />
+				<input name="email" type="email" value={p.email ?? ''} placeholder="no login yet" />
+				<button class="btn secondary" type="submit">Save email</button>
+			</form>
+			<form
+				method="POST"
+				action="?/setAdmin"
+				use:enhance
+				onsubmit={() => (toast = p.isAdmin ? 'Admin removed' : 'Admin granted')}
+			>
+				<input type="hidden" name="id" value={p.id} />
+				<input type="hidden" name="isAdmin" value={(!p.isAdmin).toString()} />
+				<button class="btn secondary" type="submit"
+					>{p.isAdmin ? 'Revoke admin' : 'Make admin'}</button
 				>
-					<input type="hidden" name="id" value={p.id} />
-					<input type="hidden" name="active" value={(!p.isActive).toString()} />
-					<button class="btn secondary" type="submit" disabled={togglingId === p.id}>
-						{#if togglingId === p.id}<span class="spin" aria-hidden="true"></span>{:else}{p.isActive
-								? 'Deactivate'
-								: 'Activate'}{/if}
-					</button>
-				</form>
-				<form method="POST" action="?/setEmail" use:enhance class="idform">
-					<input type="hidden" name="id" value={ap.id} />
-					<input name="email" type="email" value={ap.email ?? ''} placeholder="no login yet" />
-					<button class="btn secondary" type="submit">Save email</button>
-				</form>
-				<form
-					method="POST"
-					action="?/setAdmin"
-					use:enhance
-					onsubmit={() => (toast = ap.isAdmin ? 'Admin removed' : 'Admin granted')}
-				>
-					<input type="hidden" name="id" value={ap.id} />
-					<input type="hidden" name="isAdmin" value={(!ap.isAdmin).toString()} />
-					<button class="btn secondary" type="submit"
-						>{ap.isAdmin ? 'Revoke admin' : 'Make admin'}</button
-					>
-				</form>
-			{/if}
+			</form>
 		</li>
 	{/each}
 </ul>
