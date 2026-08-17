@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { resolve } from '$app/paths';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { CREATURES, creatureFor } from '$lib/creatures';
 	import Toast from '$lib/components/Toast.svelte';
@@ -59,29 +58,21 @@
 <ul class="roster">
 	{#each data.players as p (p.id)}
 		<li class="card" class:open={open.has(p.id)}>
-			<div class="prow">
-				<a
-					class="who"
-					href={resolve('/players/[id]', { id: String(p.id) })}
-					class:inactive={!p.isActive}
-				>
-					<span class="crea">{creatureFor(p.id, p.avatar)}</span>
-					<span class="name">{p.name}</span>
-				</a>
-				<div class="tags">
+			<button
+				type="button"
+				class="prow"
+				aria-expanded={open.has(p.id)}
+				onclick={() => toggleManage(p.id)}
+			>
+				<span class="crea">{creatureFor(p.id, p.avatar)}</span>
+				<span class="name" class:inactive={!p.isActive}>{p.name}</span>
+				<span class="tags">
 					{#if !p.isActive}<span class="chip off">Inactive</span>{/if}
 					{#if p.isAdmin}<span class="chip admin">Admin</span>{/if}
 					{#if p.email}<span class="chip live">Login set</span>{/if}
-				</div>
-				<button
-					type="button"
-					class="manage"
-					aria-expanded={open.has(p.id)}
-					onclick={() => toggleManage(p.id)}
-				>
-					Manage <span class="chev" aria-hidden="true">▾</span>
-				</button>
-			</div>
+				</span>
+				<span class="chev" aria-hidden="true">▾</span>
+			</button>
 
 			{#if open.has(p.id)}
 				<div class="panel">
@@ -221,7 +212,7 @@
 		justify-content: flex-end;
 	}
 
-	/* ---- Roster: one tidy row per player, controls tuck into a manage panel ---- */
+	/* ---- Roster: the whole row is a toggle for its manage panel ---- */
 	.roster {
 		list-style: none;
 		padding: 0;
@@ -234,32 +225,33 @@
 		overflow: hidden;
 	}
 	.prow {
+		width: 100%;
 		display: flex;
 		align-items: center;
 		gap: 0.6rem;
 		padding: 0.7rem 0.9rem;
-	}
-	.who {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.55rem;
-		min-width: 0;
+		border: none;
+		background: transparent;
+		text-align: left;
+		font-family: var(--body);
 		color: var(--ink);
-		text-decoration: none;
-		font-weight: 700;
+		cursor: pointer;
+		transition: background 0.14s ease;
 	}
-	.who .name {
+	.prow:hover {
+		background: rgba(0, 0, 0, 0.04);
+	}
+	.name {
 		font-size: 1rem;
+		font-weight: 700;
+		min-width: 0;
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
 	}
-	.who.inactive {
+	.name.inactive {
 		opacity: 0.5;
 		text-decoration: line-through;
-	}
-	.who:hover .name {
-		text-decoration: underline;
 	}
 	.tags {
 		display: flex;
@@ -278,30 +270,14 @@
 		background: #d7efe0;
 		color: var(--up);
 	}
-	.manage {
+	.chev {
 		margin-left: auto;
 		flex: none;
-		border: none;
-		background: transparent;
-		cursor: pointer;
 		color: var(--muted);
-		font-family: var(--display);
-		font-weight: 800;
-		font-size: 0.8rem;
-		display: inline-flex;
-		align-items: center;
-		gap: 0.3rem;
-		padding: 0.35rem 0.4rem;
-		border-radius: 8px;
-	}
-	.manage:hover {
-		color: var(--ink);
-		background: rgba(0, 0, 0, 0.05);
-	}
-	.manage .chev {
+		font-size: 0.9rem;
 		transition: transform 0.15s ease;
 	}
-	li.open .manage .chev {
+	li.open .chev {
 		transform: rotate(180deg);
 	}
 
