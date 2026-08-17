@@ -238,7 +238,7 @@
 		.board-main {
 			min-height: 0;
 			overflow-y: auto;
-			padding: 0 0.35rem;
+			padding: 0.5rem 0 0.35rem;
 		}
 		/* Don't let the podium/list get squashed to fit the scroll container —
 		   keep their natural heights (so the podium tiers stay correct) and let
@@ -250,6 +250,7 @@
 		/* Keep the aside at its natural height, pinned to the top of the row. */
 		.aside {
 			align-self: start;
+			padding-top: 0.5rem;
 		}
 	}
 </style>

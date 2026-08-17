@@ -78,7 +78,7 @@
 		align-items: center;
 		gap: 0.6rem;
 		flex-wrap: wrap;
-		margin: 0.75rem 0 1rem;
+		margin: 0.75rem 0 0.5rem;
 	}
 	.frow {
 		display: flex;
