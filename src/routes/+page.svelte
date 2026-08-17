@@ -238,7 +238,7 @@
 		.board-main {
 			min-height: 0;
 			overflow-y: auto;
-			padding: 0.5rem 0 0.35rem;
+			padding: 0.5rem 0.35rem 0;
 		}
 		/* Don't let the podium/list get squashed to fit the scroll container —
 		   keep their natural heights (so the podium tiers stay correct) and let
