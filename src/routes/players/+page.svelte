@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
+	import { SvelteSet } from 'svelte/reactivity';
 	import { CREATURES, creatureFor } from '$lib/creatures';
 	import Toast from '$lib/components/Toast.svelte';
 	let { data, form } = $props();
@@ -9,6 +10,11 @@
 	let addingSubmitting = $state(false);
 	let togglingId = $state<number | null>(null);
 	let toast = $state<string | null>(null);
+
+	// Which players have their manage panel expanded. Several may be open at once
+	// so opening one player never discards an unsaved edit in another.
+	const open = new SvelteSet<number>();
+	const toggleManage = (id: number) => (open.has(id) ? open.delete(id) : open.add(id));
 </script>
 
 <h1>Players</h1>
@@ -28,13 +34,13 @@
 	}}
 	class="card add"
 >
-	<div class="row1">
-		<span class="preview">{avatar}</span>
-		<input name="name" placeholder="New player name" />
+	<div class="head">
+		<span class="crea">{avatar}</span>
+		<span class="grow">New player</span>
+	</div>
+	<div class="inputs">
+		<input name="name" placeholder="Player name" />
 		<input name="email" type="email" placeholder="Google email (optional)" autocomplete="off" />
-		<button class="btn" type="submit" disabled={addingSubmitting}>
-			{#if addingSubmitting}<span class="spin" aria-hidden="true"></span> Adding…{:else}Add{/if}
-		</button>
 	</div>
 	<input type="hidden" name="avatar" value={avatar} />
 	<div class="picker">
@@ -42,81 +48,144 @@
 			<button type="button" class:on={avatar === c} onclick={() => (avatar = c)}>{c}</button>
 		{/each}
 	</div>
+	<div class="actions">
+		<button class="btn" type="submit" disabled={addingSubmitting}>
+			{#if addingSubmitting}<span class="spin" aria-hidden="true"></span> Adding…{:else}Add player{/if}
+		</button>
+	</div>
 </form>
 {#if form?.error}<p class="err">{form.error}</p>{/if}
 
-<ul>
+<ul class="roster">
 	{#each data.players as p (p.id)}
-		<li class="card">
-			<a href={resolve('/players/[id]', { id: String(p.id) })} class:inactive={!p.isActive}>
-				<span class="crea">{creatureFor(p.id, p.avatar)}</span>{p.name}
-			</a>
-			<form
-				method="POST"
-				action="?/toggle"
-				use:enhance={() => {
-					const wasActive = p.isActive;
-					togglingId = p.id;
-					return async ({ result, update }) => {
-						await update();
-						togglingId = null;
-						if (result.type === 'success')
-							toast = wasActive ? 'Player deactivated' : 'Player activated';
-					};
-				}}
-			>
-				<input type="hidden" name="id" value={p.id} />
-				<input type="hidden" name="active" value={(!p.isActive).toString()} />
-				<button class="btn secondary" type="submit" disabled={togglingId === p.id}>
-					{#if togglingId === p.id}<span class="spin" aria-hidden="true"></span>{:else}{p.isActive
-							? 'Deactivate'
-							: 'Activate'}{/if}
-				</button>
-			</form>
-			<form method="POST" action="?/setEmail" use:enhance class="idform">
-				<input type="hidden" name="id" value={p.id} />
-				<input name="email" type="email" value={p.email ?? ''} placeholder="no login yet" />
-				<button class="btn secondary" type="submit">Save email</button>
-			</form>
-			<form
-				method="POST"
-				action="?/setAdmin"
-				use:enhance
-				onsubmit={() => (toast = p.isAdmin ? 'Admin removed' : 'Admin granted')}
-			>
-				<input type="hidden" name="id" value={p.id} />
-				<input type="hidden" name="isAdmin" value={(!p.isAdmin).toString()} />
-				<button class="btn secondary" type="submit"
-					>{p.isAdmin ? 'Revoke admin' : 'Make admin'}</button
+		<li class="card" class:open={open.has(p.id)}>
+			<div class="prow">
+				<a
+					class="who"
+					href={resolve('/players/[id]', { id: String(p.id) })}
+					class:inactive={!p.isActive}
 				>
-			</form>
+					<span class="crea">{creatureFor(p.id, p.avatar)}</span>
+					<span class="name">{p.name}</span>
+				</a>
+				<div class="tags">
+					{#if !p.isActive}<span class="chip off">Inactive</span>{/if}
+					{#if p.isAdmin}<span class="chip admin">Admin</span>{/if}
+					{#if p.email}<span class="chip live">Login set</span>{/if}
+				</div>
+				<button
+					type="button"
+					class="manage"
+					aria-expanded={open.has(p.id)}
+					onclick={() => toggleManage(p.id)}
+				>
+					Manage <span class="chev" aria-hidden="true">▾</span>
+				</button>
+			</div>
+
+			{#if open.has(p.id)}
+				<div class="panel">
+					<form method="POST" action="?/setEmail" use:enhance class="fieldrow">
+						<label for="email-{p.id}">Google login email</label>
+						<div class="emailrow">
+							<input type="hidden" name="id" value={p.id} />
+							<input
+								id="email-{p.id}"
+								name="email"
+								type="email"
+								value={p.email ?? ''}
+								placeholder="no login yet"
+							/>
+							<button class="btn secondary sm" type="submit">Save</button>
+						</div>
+					</form>
+
+					<div class="toggles">
+						<form
+							method="POST"
+							action="?/toggle"
+							use:enhance={() => {
+								const wasActive = p.isActive;
+								togglingId = p.id;
+								return async ({ result, update }) => {
+									await update();
+									togglingId = null;
+									if (result.type === 'success')
+										toast = wasActive ? 'Player deactivated' : 'Player activated';
+								};
+							}}
+						>
+							<input type="hidden" name="id" value={p.id} />
+							<input type="hidden" name="active" value={(!p.isActive).toString()} />
+							<button class="btn secondary sm" type="submit" disabled={togglingId === p.id}>
+								{#if togglingId === p.id}<span class="spin" aria-hidden="true"
+									></span>{:else}{p.isActive ? 'Deactivate' : 'Activate'}{/if}
+							</button>
+						</form>
+
+						<form
+							method="POST"
+							action="?/setAdmin"
+							use:enhance
+							onsubmit={() => (toast = p.isAdmin ? 'Admin removed' : 'Admin granted')}
+						>
+							<input type="hidden" name="id" value={p.id} />
+							<input type="hidden" name="isAdmin" value={(!p.isAdmin).toString()} />
+							<button class="btn secondary sm" type="submit">
+								{p.isAdmin ? 'Revoke admin' : 'Make admin'}
+							</button>
+						</form>
+					</div>
+				</div>
+			{/if}
 		</li>
 	{/each}
 </ul>
 
 <style>
-	.add {
-		display: grid;
-		gap: 0.6rem;
-		margin: 1rem 0;
-	}
-	.row1 {
-		display: flex;
-		gap: 0.5rem;
-		align-items: center;
-	}
-	.preview {
-		font-size: 1.4rem;
-		width: 2.2rem;
-		height: 2.2rem;
+	.crea {
 		display: grid;
 		place-items: center;
-		border-radius: 10px;
-		background: #e7d6ad;
+		width: 2.3rem;
+		height: 2.3rem;
 		flex: none;
+		border-radius: 9px;
+		font-size: 1.25rem;
+		background: linear-gradient(155deg, #edca66, #cf9a2c);
+		border: 1.5px solid var(--edge);
+		box-shadow: inset 0 1px 3px rgba(255, 255, 255, 0.4);
 	}
-	.row1 input {
+
+	/* ---- Add form: inputs stack (and never overflow), controls get own rows ---- */
+	.add {
+		display: grid;
+		gap: 0.7rem;
+		margin: 1rem 0;
+	}
+	.add .head {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+	}
+	.add .head .grow {
 		flex: 1;
+		min-width: 0;
+		font-family: var(--display);
+		font-weight: 800;
+		color: var(--muted);
+	}
+	.inputs {
+		display: grid;
+		gap: 0.5rem;
+	}
+	@media (min-width: 460px) {
+		.inputs {
+			grid-template-columns: 1fr 1fr;
+		}
+	}
+	.add input {
+		width: 100%;
+		min-width: 0;
 		padding: 0.7rem;
 		border-radius: var(--radius-sm);
 		border: 2px solid var(--surface-2);
@@ -147,74 +216,143 @@
 		border-color: var(--teal);
 		background: #d7efe0;
 	}
-	ul {
+	.add .actions {
+		display: flex;
+		justify-content: flex-end;
+	}
+
+	/* ---- Roster: one tidy row per player, controls tuck into a manage panel ---- */
+	.roster {
 		list-style: none;
 		padding: 0;
+		margin: 0;
 		display: grid;
 		gap: 0.5rem;
 	}
 	li {
+		padding: 0;
+		overflow: hidden;
+	}
+	.prow {
 		display: flex;
-		justify-content: space-between;
 		align-items: center;
-		position: relative;
-		flex-wrap: wrap;
-		gap: 0.5rem;
-		/* Match the leaderboard cards: lift on hover, press down on tap. */
-		transition:
-			transform 0.14s ease,
-			box-shadow 0.14s ease;
+		gap: 0.6rem;
+		padding: 0.7rem 0.9rem;
 	}
-	li:hover {
-		transform: translateY(-3px);
-		box-shadow: 0 8px 0 rgba(0, 0, 0, 0.28);
-	}
-	li:active {
-		transform: translateY(1px);
-		box-shadow: 0 3px 0 rgba(0, 0, 0, 0.28);
-	}
-	li a {
+	.who {
 		display: inline-flex;
 		align-items: center;
-		gap: 0.5rem;
+		gap: 0.55rem;
+		min-width: 0;
 		color: var(--ink);
 		text-decoration: none;
 		font-weight: 700;
 	}
-	/* Stretched link: the whole card is clickable and navigates to the player.
-	   The anchor's ::after overlays the entire card (li is the positioned
-	   ancestor); the action form sits above it via z-index. */
-	li a::after {
-		content: '';
-		position: absolute;
-		inset: 0;
-		border-radius: inherit;
+	.who .name {
+		font-size: 1rem;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
-	li form {
-		position: relative;
-		z-index: 1;
-	}
-	.crea {
-		font-size: 1.2rem;
-	}
-	a.inactive {
+	.who.inactive {
 		opacity: 0.5;
 		text-decoration: line-through;
 	}
-	.err {
-		color: var(--danger);
+	.who:hover .name {
+		text-decoration: underline;
 	}
-	.idform {
+	.tags {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.3rem;
+	}
+	.chip.admin {
+		background: #f3e2b0;
+		color: #9a6d12;
+	}
+	.chip.off {
+		background: #f0ddd6;
+		color: var(--down);
+	}
+	.chip.live {
+		background: #d7efe0;
+		color: var(--up);
+	}
+	.manage {
+		margin-left: auto;
+		flex: none;
+		border: none;
+		background: transparent;
+		cursor: pointer;
+		color: var(--muted);
+		font-family: var(--display);
+		font-weight: 800;
+		font-size: 0.8rem;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.3rem;
+		padding: 0.35rem 0.4rem;
+		border-radius: 8px;
+	}
+	.manage:hover {
+		color: var(--ink);
+		background: rgba(0, 0, 0, 0.05);
+	}
+	.manage .chev {
+		transition: transform 0.15s ease;
+	}
+	li.open .manage .chev {
+		transform: rotate(180deg);
+	}
+
+	.panel {
+		border-top: 1px dashed var(--line-card);
+		margin: 0 0.9rem;
+		padding: 0.8rem 0 0.9rem;
+		display: grid;
+		gap: 0.8rem;
+	}
+	.fieldrow {
+		display: grid;
+		gap: 0.4rem;
+	}
+	.panel label {
+		font-size: 0.7rem;
+		font-weight: 800;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		color: var(--muted);
+	}
+	.emailrow {
 		display: flex;
 		gap: 0.4rem;
-		align-items: center;
+		max-width: 26rem;
 	}
-	.idform input {
-		padding: 0.45rem 0.6rem;
+	/* min-width:0 is what lets the input shrink inside the flex row instead of
+	   forcing the tile wider — the fix for the overflow. */
+	.emailrow input {
+		flex: 1;
+		min-width: 0;
+		padding: 0.55rem 0.6rem;
 		border-radius: var(--radius-sm);
 		border: 2px solid var(--surface-2);
 		background: var(--bg);
 		color: var(--ink);
-		max-width: 12rem;
+	}
+	.emailrow .btn {
+		flex: none;
+	}
+	.toggles {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+	}
+	.sm {
+		padding: 0.45rem 0.8rem;
+		font-size: 0.82rem;
+	}
+
+	.err {
+		color: var(--danger);
 	}
 </style>
