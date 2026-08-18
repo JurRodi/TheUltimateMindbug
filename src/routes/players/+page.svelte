@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { SvelteSet } from 'svelte/reactivity';
+	import { SvelteSet, SvelteMap } from 'svelte/reactivity';
 	import { CREATURES, creatureFor } from '$lib/creatures';
 	import Toast from '$lib/components/Toast.svelte';
 	let { data, form } = $props();
@@ -14,6 +14,12 @@
 	// so opening one player never discards an unsaved edit in another.
 	const open = new SvelteSet<number>();
 	const toggleManage = (id: number) => (open.has(id) ? open.delete(id) : open.add(id));
+
+	// Per-player avatar picked in the manage panel. Defaults to the player's
+	// current avatar (or their deterministic fallback) until the admin changes it.
+	const chosen = new SvelteMap<number, string>();
+	const avatarFor = (p: { id: number; avatar: string | null }) =>
+		chosen.get(p.id) ?? creatureFor(p.id, p.avatar);
 </script>
 
 <h1>Players</h1>
@@ -76,22 +82,47 @@
 
 			{#if open.has(p.id)}
 				<div class="panel">
-					<form method="POST" action="?/setEmail" use:enhance class="fieldrow">
-						<label for="email-{p.id}">Google login email</label>
-						<div class="emailrow">
-							<input type="hidden" name="id" value={p.id} />
-							<input
-								id="email-{p.id}"
-								name="email"
-								type="email"
-								value={p.email ?? ''}
-								placeholder="no login yet"
-							/>
-							<button class="btn secondary sm" type="submit">Save</button>
+					<form
+						id="profile-{p.id}"
+						method="POST"
+						action="?/saveProfile"
+						use:enhance={() => {
+							return async ({ result, update }) => {
+								// reset:false keeps the typed name/email in the inputs after a
+								// save instead of clearing them back to blank.
+								await update({ reset: false });
+								if (result.type === 'success') toast = 'Profile updated ✓';
+							};
+						}}
+						class="fieldrow"
+					>
+						<input type="hidden" name="id" value={p.id} />
+						<input type="hidden" name="avatar" value={avatarFor(p)} />
+
+						<label for="name-{p.id}">Name</label>
+						<input id="name-{p.id}" name="name" value={p.name} maxlength="40" />
+
+						<div class="picker">
+							{#each CREATURES as c (c)}
+								<button
+									type="button"
+									class:on={avatarFor(p) === c}
+									onclick={() => chosen.set(p.id, c)}>{c}</button
+								>
+							{/each}
 						</div>
+
+						<label for="email-{p.id}">Google login email</label>
+						<input
+							id="email-{p.id}"
+							name="email"
+							type="email"
+							value={p.email ?? ''}
+							placeholder="no login yet"
+						/>
 					</form>
 
-					<div class="toggles">
+					<div class="actions">
 						<form
 							method="POST"
 							action="?/toggle"
@@ -108,7 +139,7 @@
 						>
 							<input type="hidden" name="id" value={p.id} />
 							<input type="hidden" name="active" value={(!p.isActive).toString()} />
-							<button class="btn secondary sm" type="submit" disabled={togglingId === p.id}>
+							<button class="btn secondary" type="submit" disabled={togglingId === p.id}>
 								{#if togglingId === p.id}<span class="spin" aria-hidden="true"
 									></span>{:else}{p.isActive ? 'Deactivate' : 'Activate'}{/if}
 							</button>
@@ -122,10 +153,12 @@
 						>
 							<input type="hidden" name="id" value={p.id} />
 							<input type="hidden" name="isAdmin" value={(!p.isAdmin).toString()} />
-							<button class="btn secondary sm" type="submit">
+							<button class="btn secondary" type="submit">
 								{p.isAdmin ? 'Revoke admin' : 'Make admin'}
 							</button>
 						</form>
+
+						<button class="btn" type="submit" form="profile-{p.id}">Save</button>
 					</div>
 				</div>
 			{/if}
@@ -299,15 +332,11 @@
 		letter-spacing: 0.05em;
 		color: var(--muted);
 	}
-	.emailrow {
-		display: flex;
-		gap: 0.4rem;
+	/* min-width:0 lets the inputs shrink inside the tile instead of forcing it
+	   wider; max-width keeps them (and the aligned Save button) a sensible size. */
+	.panel input:not([type='hidden']) {
+		width: 100%;
 		max-width: 26rem;
-	}
-	/* min-width:0 is what lets the input shrink inside the flex row instead of
-	   forcing the tile wider — the fix for the overflow. */
-	.emailrow input {
-		flex: 1;
 		min-width: 0;
 		padding: 0.55rem 0.6rem;
 		border-radius: var(--radius-sm);
@@ -315,17 +344,15 @@
 		background: var(--bg);
 		color: var(--ink);
 	}
-	.emailrow .btn {
-		flex: none;
-	}
-	.toggles {
+	/* Deactivate + Make-admin + Save share one right-aligned row, Save last (the
+	   rightmost, primary action). Each toggle is its own <form>; Save submits the
+	   profile form via form=. */
+	.panel .actions {
 		display: flex;
 		flex-wrap: wrap;
+		align-items: center;
+		justify-content: flex-end;
 		gap: 0.5rem;
-	}
-	.sm {
-		padding: 0.45rem 0.8rem;
-		font-size: 0.82rem;
 	}
 
 	.err {

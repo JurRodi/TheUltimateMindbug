@@ -4,7 +4,8 @@ import {
 	getPlayersForAdmin,
 	addPlayer,
 	setPlayerActive,
-	updatePlayerAuth
+	updatePlayerAuth,
+	updatePlayerProfile
 } from '$lib/server/db/queries';
 import { requireAdmin } from '$lib/server/authz';
 import { isValidAvatar } from '$lib/creatures';
@@ -38,29 +39,37 @@ export const actions: Actions = {
 		}
 		return { ok: true };
 	},
+	saveProfile: async ({ request, locals }) => {
+		// Admin editing any player's name, avatar and login email in one submit (id
+		// comes from the form, safe because this action is admin-gated). Same
+		// validation as /account, plus the email format check from `add`.
+		requireAdmin(locals.auth);
+		const form = await request.formData();
+		const id = Number(form.get('id'));
+		const name = normalizeName(String(form.get('name') ?? ''));
+		const avatar = String(form.get('avatar') ?? '').trim() || null;
+		const email =
+			String(form.get('email') ?? '')
+				.trim()
+				.toLowerCase() || null;
+		if (!Number.isInteger(id) || id <= 0) return fail(400, { error: 'Invalid player' });
+		if (!name) return fail(400, { error: `Enter a name (max ${MAX_NAME_LEN} characters)` });
+		if (!isValidAvatar(avatar)) return fail(400, { error: 'Invalid avatar' });
+		if (email !== null && !isValidEmail(email)) return fail(400, { error: 'Invalid email' });
+		try {
+			await updatePlayerProfile(db, id, { name, avatar });
+			await updatePlayerAuth(db, id, { email });
+		} catch {
+			return fail(400, { error: 'That name or email is already taken' });
+		}
+		return { ok: true };
+	},
 	toggle: async ({ request, locals }) => {
 		requireAdmin(locals.auth);
 		const form = await request.formData();
 		const id = Number(form.get('id'));
 		if (!Number.isInteger(id) || id <= 0) return fail(400, { error: 'Invalid player' });
 		await setPlayerActive(db, id, form.get('active') === 'true');
-		return { ok: true };
-	},
-	setEmail: async ({ request, locals }) => {
-		requireAdmin(locals.auth);
-		const form = await request.formData();
-		const id = Number(form.get('id'));
-		const email =
-			String(form.get('email') ?? '')
-				.trim()
-				.toLowerCase() || null;
-		if (!Number.isInteger(id) || id <= 0) return fail(400, { error: 'Invalid player' });
-		if (email !== null && !isValidEmail(email)) return fail(400, { error: 'Invalid email' });
-		try {
-			await updatePlayerAuth(db, id, { email });
-		} catch {
-			return fail(400, { error: 'That email is already assigned' });
-		}
 		return { ok: true };
 	},
 	setAdmin: async ({ request, locals }) => {
