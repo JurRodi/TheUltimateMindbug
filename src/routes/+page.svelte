@@ -71,13 +71,33 @@
 	const champ = $derived(data.rows[0] ?? null);
 	const champStreak = (s: number) => (s > 0 ? `W${s} 🔥` : s < 0 ? `L${-s}` : '–');
 	const deltaText = (d: number) => (d > 0 ? `▲ ${d}` : d < 0 ? `▼ ${-d}` : '–');
+
+	// Collapsed-filter summary shown on mobile (the full controls live inside the
+	// <details> body; on desktop the summary is hidden and BoardFilters shows inline).
+	const filterSummary = $derived(
+		[
+			data.view === 'teams' ? 'Teams' : 'Players',
+			data.format === 'total' ? 'Total' : data.format,
+			data.range === 'week' ? 'Week' : data.range === 'month' ? 'Month' : 'All time'
+		].join(' · ')
+	);
 </script>
 
 {#if toast}<Toast message={toast} ondone={() => (toast = null)} />{/if}
 
 <h1>The Ultimate Mindbug 🐛</h1>
 
-<BoardFilters view={data.view} format={data.format} range={data.range} />
+<!-- Mobile: the filter bar collapses to a summary pill (tap to reveal the
+     controls). Desktop hides the summary and shows BoardFilters inline as before. -->
+<details class="filter-collapse">
+	<summary>
+		<span class="fc-label">Filters</span>
+		<span class="fc-summary">{filterSummary}</span>
+	</summary>
+	<div class="fc-body">
+		<BoardFilters view={data.view} format={data.format} range={data.range} />
+	</div>
+</details>
 
 {#if data.view === 'teams'}
 	{#if data.teams.length === 0}
@@ -103,40 +123,52 @@
 				{/if}
 			</div>
 
+			<!-- Mobile: these collapse to tappable pills and move above the podium
+			     (see .aside order/…-collapse rules). Desktop restores the pinned column. -->
 			<aside class="aside">
 				{#if topTeam}
-					<div class="info grad">
-						<h4>Top team</h4>
-						<div class="big">{topTeam.names.join(' + ')}</div>
-						<div class="row"><span>win rate</span><span>{pct(topTeam.winRate)}</span></div>
+					<details class="info card-collapse grad">
+						<summary>
+							<span class="cc-title">Top team</span>
+							<span class="cc-headline">{topTeam.names.join(' + ')}</span>
+						</summary>
+						<div class="cc-body">
+							<div class="row"><span>win rate</span><span>{pct(topTeam.winRate)}</span></div>
+							<div class="row">
+								<span>record</span><span>{topTeam.wins}W · {topTeam.losses}L</span>
+							</div>
+						</div>
+					</details>
+				{/if}
+				<details class="info card-collapse">
+					<summary>
+						<span class="cc-title">This week</span>
+						<span class="cc-headline">{data.weekly.games}</span>
+					</summary>
+					<div class="cc-body">
 						<div class="row">
-							<span>record</span><span>{topTeam.wins}W · {topTeam.losses}L</span>
+							<span>games played</span><span>{deltaText(data.weekly.delta)}</span>
+						</div>
+						<div class="row">
+							<span>biggest climb</span>
+							<span
+								>{data.weekly.climb
+									? `${data.weekly.climb.name} +${data.weekly.climb.gain}`
+									: '–'}</span
+							>
 						</div>
 					</div>
-				{/if}
-				<div class="info">
-					<h4>This week</h4>
-					<div class="big">{data.weekly.games}</div>
-					<div class="row">
-						<span>games played</span><span>{deltaText(data.weekly.delta)}</span>
+				</details>
+				<details class="info card-collapse">
+					<summary><span class="cc-title">Tile legend</span></summary>
+					<div class="cc-body">
+						<div class="legend">
+							<span class="chip">40 GP</span> games · <span class="chip w">18W</span> wins ·
+							<span class="chip l">7L</span> losses · <b style="color: #fff">72%</b> win rate
+						</div>
+						<p class="rule-note">Teams need 3+ games to rank on win rate.</p>
 					</div>
-					<div class="row">
-						<span>biggest climb</span>
-						<span
-							>{data.weekly.climb
-								? `${data.weekly.climb.name} +${data.weekly.climb.gain}`
-								: '–'}</span
-						>
-					</div>
-				</div>
-				<div class="info">
-					<h4>Tile legend</h4>
-					<div class="legend">
-						<span class="chip">40 GP</span> games · <span class="chip w">18W</span> wins ·
-						<span class="chip l">7L</span> losses · <b style="color: #fff">72%</b> win rate
-					</div>
-					<p class="rule-note">Teams need 3+ games to rank on win rate.</p>
-				</div>
+				</details>
 			</aside>
 		</div>
 	{/if}
@@ -161,36 +193,52 @@
 			</div>
 		</div>
 
+		<!-- Mobile: these collapse to tappable pills and move above the podium
+		     (see .aside order/…-collapse rules). Desktop restores the pinned column. -->
 		<aside class="aside">
 			{#if champ}
-				<div class="info grad">
-					<h4>Champion</h4>
-					<div class="big">{champ.player.name}</div>
-					<div class="row"><span>rating</span><span>{champ.rated ? champ.rating : '—'}</span></div>
-					<div class="row"><span>streak</span><span>{champStreak(champ.streak)}</span></div>
-				</div>
+				<details class="info card-collapse grad">
+					<summary>
+						<span class="cc-title">Champion</span>
+						<span class="cc-headline">{champ.player.name}</span>
+					</summary>
+					<div class="cc-body">
+						<div class="row">
+							<span>rating</span><span>{champ.rated ? champ.rating : '—'}</span>
+						</div>
+						<div class="row"><span>streak</span><span>{champStreak(champ.streak)}</span></div>
+					</div>
+				</details>
 			{/if}
-			<div class="info">
-				<h4>This week</h4>
-				<div class="big">{data.weekly.games}</div>
-				<div class="row"><span>games played</span><span>{deltaText(data.weekly.delta)}</span></div>
-				<div class="row">
-					<span>biggest climb</span>
-					<span
-						>{data.weekly.climb
-							? `${data.weekly.climb.name} +${data.weekly.climb.gain}`
-							: '–'}</span
-					>
+			<details class="info card-collapse">
+				<summary>
+					<span class="cc-title">This week</span>
+					<span class="cc-headline">{data.weekly.games}</span>
+				</summary>
+				<div class="cc-body">
+					<div class="row">
+						<span>games played</span><span>{deltaText(data.weekly.delta)}</span>
+					</div>
+					<div class="row">
+						<span>biggest climb</span>
+						<span
+							>{data.weekly.climb
+								? `${data.weekly.climb.name} +${data.weekly.climb.gain}`
+								: '–'}</span
+						>
+					</div>
 				</div>
-			</div>
-			<div class="info">
-				<h4>Tile legend</h4>
-				<div class="legend">
-					<span class="chip">40 GP</span> games · <span class="chip">64%</span> win rate ·
-					<span class="chip w">W5</span> win streak · <span class="chip l">L3</span> loss streak ·
-					<span class="chip none">–</span> none · <b style="color: #fff">1187</b> rating
+			</details>
+			<details class="info card-collapse">
+				<summary><span class="cc-title">Tile legend</span></summary>
+				<div class="cc-body">
+					<div class="legend">
+						<span class="chip">40 GP</span> games · <span class="chip">64%</span> win rate ·
+						<span class="chip w">W5</span> win streak · <span class="chip l">L3</span> loss streak ·
+						<span class="chip none">–</span> none · <b style="color: #fff">1187</b> rating
+					</div>
 				</div>
-			</div>
+			</details>
 		</aside>
 	</div>
 {/if}
@@ -221,8 +269,165 @@
 		color: var(--onmat-muted);
 		opacity: 0.75;
 	}
+
+	/* ---------------------------------------------------------------------------
+	   Mobile collapsibles. The filter bar and the three side cards each render as
+	   a <details>: collapsed to a tappable pill on mobile, forced open (and made
+	   non-interactive) on desktop so the original board layout is unchanged.
+	   --------------------------------------------------------------------------- */
+
+	/* Enable height:auto <-> 0 interpolation so the <details> can animate open.
+	   Browsers without it just skip the height tween (still open/close fine). */
+	:global(:root) {
+		interpolate-size: allow-keywords;
+		/* Chevron icon used (via mask) for every collapsible's disclosure arrow. */
+		--chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 5l7 7-7 7'/%3E%3C/svg%3E");
+	}
+
+	/* Filter: one integrated collapsible card on mobile — the summary is the
+	   header and the controls expand inside the same card (not a panel below). */
+	.filter-collapse {
+		margin: 0.75rem 0 0.5rem;
+		border-radius: 14px;
+		background: rgba(0, 0, 0, 0.22);
+		border: 1px solid rgba(255, 255, 255, 0.08);
+	}
+	.filter-collapse > summary {
+		list-style: none;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.65rem 0.85rem;
+	}
+	.filter-collapse > summary::-webkit-details-marker {
+		display: none;
+	}
+	.fc-label {
+		flex: none;
+		font-size: 0.62rem;
+		letter-spacing: 0.07em;
+		text-transform: uppercase;
+		font-weight: 800;
+		color: var(--onmat-muted);
+	}
+	.fc-summary {
+		font-size: 0.8rem;
+		font-weight: 600;
+		color: var(--onmat);
+	}
+	.filter-collapse > summary::after {
+		content: '';
+		margin-left: auto;
+		width: 0.95rem;
+		height: 0.95rem;
+		background-color: var(--onmat-muted);
+		-webkit-mask: var(--chevron) center / contain no-repeat;
+		mask: var(--chevron) center / contain no-repeat;
+		transition: transform 0.2s ease;
+	}
+	.filter-collapse[open] > summary::after {
+		transform: rotate(90deg);
+	}
+	.fc-body {
+		padding: 0 0.85rem 0.75rem;
+	}
+	/* Strip BoardFilters' own mobile panel chrome so it lives inside this card;
+	   its grid/labels stay. Desktop re-adds the wrapper's spacing (see below). */
+	.fc-body :global(.filters) {
+		margin: 0 !important;
+		background: none !important;
+		border: 0 !important;
+		padding: 0 !important;
+	}
+
+	/* Side cards: collapsed pills that move above the podium on mobile. */
+	.aside {
+		order: -1;
+	}
+	/* Trim the collapsed pill height (symmetric top/bottom); the desktop block
+	   restores the full .info padding for the pinned cards. */
+	.card-collapse {
+		padding: 0.55rem 1rem;
+	}
+	.card-collapse > summary {
+		list-style: none;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+	.card-collapse > summary::-webkit-details-marker {
+		display: none;
+	}
+	.cc-title {
+		flex: none;
+		font-size: 0.7rem;
+		letter-spacing: 0.07em;
+		text-transform: uppercase;
+		font-weight: 800;
+		color: var(--onmat-muted);
+	}
+	.cc-headline {
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		font-weight: 800;
+		font-size: 1rem;
+		font-variant-numeric: tabular-nums;
+		font-family: var(--display);
+		color: var(--onmat);
+	}
+	.card-collapse > summary::after {
+		content: '';
+		flex: none;
+		margin-left: auto;
+		width: 0.95rem;
+		height: 0.95rem;
+		background-color: var(--onmat-muted);
+		-webkit-mask: var(--chevron) center / contain no-repeat;
+		mask: var(--chevron) center / contain no-repeat;
+		transition: transform 0.2s ease;
+	}
+	.card-collapse[open] > summary::after {
+		transform: rotate(90deg);
+	}
+	.card-collapse.grad .cc-title {
+		color: rgba(58, 43, 6, 0.7);
+	}
+	.card-collapse.grad > summary::after {
+		background-color: rgba(58, 43, 6, 0.7);
+	}
+	.card-collapse.grad .cc-headline {
+		color: #3a2b06;
+	}
+	.cc-body {
+		margin-top: 0.6rem;
+	}
+
+	/* Animate expand/collapse for every collapsible on mobile. height transitions
+	   to/from auto thanks to the :root interpolate-size above; allow-discrete keeps
+	   the content rendered through the closing tween. */
+	.filter-collapse::details-content,
+	.card-collapse::details-content {
+		height: 0;
+		overflow: hidden;
+		opacity: 0;
+		transition:
+			height 0.26s ease,
+			opacity 0.22s ease,
+			content-visibility 0.26s;
+		transition-behavior: allow-discrete;
+	}
+	.filter-collapse[open]::details-content,
+	.card-collapse[open]::details-content {
+		height: auto;
+		opacity: 1;
+	}
+
 	/* Wide screens: leaderboard + a fixed-width aside column. Below this the
-	   aside stacks under the board. */
+	   aside stacks above the board (as collapsible pills). */
 	@media (min-width: 1080px) {
 		/* Grow to fill the viewport-height wrap (see .wrap.wide in app.css); the
 		   grid rows stretch so board-main gets a definite height to scroll into. */
@@ -247,10 +452,60 @@
 		.tiles {
 			flex-shrink: 0;
 		}
-		/* Keep the aside at its natural height, pinned to the top of the row. */
+		/* Restore the aside to the right-hand column at its natural height. */
 		.aside {
+			order: 0;
 			align-self: start;
 			padding-top: 0.5rem;
+		}
+
+		/* Filter renders inline as before — drop the card chrome and the header. */
+		.filter-collapse {
+			background: none;
+			border: 0;
+		}
+		.filter-collapse > summary {
+			display: none;
+		}
+		.fc-body {
+			padding: 0;
+			display: block !important;
+		}
+
+		/* Side cards render as static cards: title over headline over rows. */
+		.card-collapse {
+			padding: 1rem;
+		}
+		.card-collapse > summary {
+			display: block;
+			cursor: default;
+			pointer-events: none;
+		}
+		.card-collapse > summary::after {
+			display: none;
+		}
+		.cc-title {
+			display: block;
+			margin-bottom: 0.5rem;
+		}
+		.cc-headline {
+			display: block;
+			font-size: 1.7rem;
+			white-space: normal;
+			overflow: visible;
+		}
+		.cc-body {
+			margin-top: 0;
+			display: block !important;
+		}
+		/* No animation on desktop — everything is forced open and static. */
+		.filter-collapse::details-content,
+		.card-collapse::details-content {
+			height: auto;
+			overflow: visible;
+			opacity: 1;
+			content-visibility: visible;
+			transition: none;
 		}
 	}
 </style>
