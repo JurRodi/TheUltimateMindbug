@@ -7,6 +7,8 @@ import {
 	updatePlayerAuth
 } from '$lib/server/db/queries';
 import { requireAdmin } from '$lib/server/authz';
+import { isValidAvatar } from '$lib/creatures';
+import { normalizeName, isValidEmail, MAX_NAME_LEN } from '$lib/validation';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -20,13 +22,15 @@ export const actions: Actions = {
 	add: async ({ request, locals }) => {
 		requireAdmin(locals.auth);
 		const form = await request.formData();
-		const name = String(form.get('name') ?? '').trim();
+		const name = normalizeName(String(form.get('name') ?? ''));
 		const avatar = String(form.get('avatar') ?? '').trim() || null;
 		const email =
 			String(form.get('email') ?? '')
 				.trim()
 				.toLowerCase() || null;
-		if (!name) return fail(400, { error: 'Name required' });
+		if (!name) return fail(400, { error: `Enter a name (max ${MAX_NAME_LEN} characters)` });
+		if (!isValidAvatar(avatar)) return fail(400, { error: 'Invalid avatar' });
+		if (email !== null && !isValidEmail(email)) return fail(400, { error: 'Invalid email' });
 		try {
 			await addPlayer(db, name, avatar, email);
 		} catch {
@@ -51,6 +55,7 @@ export const actions: Actions = {
 				.trim()
 				.toLowerCase() || null;
 		if (!Number.isInteger(id) || id <= 0) return fail(400, { error: 'Invalid player' });
+		if (email !== null && !isValidEmail(email)) return fail(400, { error: 'Invalid email' });
 		try {
 			await updatePlayerAuth(db, id, { email });
 		} catch {

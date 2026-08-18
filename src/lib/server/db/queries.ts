@@ -3,6 +3,7 @@ import type { PgDatabase } from 'drizzle-orm/pg-core';
 import * as schema from './schema';
 import { players, games, gameParticipants } from './schema';
 import { toGameInputs, type GameRow, type ParticipantRow } from './shape';
+import { isValidAvatar } from '$lib/creatures';
 import type { Player, AdminPlayer, GameInput, Format, Side } from '$lib/types';
 
 // The query-result HKT parameter must be `any` here: neon-http and pglite each
@@ -40,6 +41,9 @@ export async function addPlayer(
 	avatar?: string | null,
 	email?: string | null
 ): Promise<AdminPlayer> {
+	// Last line of defence: reject a non-allow-list avatar before it hits the DB,
+	// regardless of which caller invoked this (the actions validate too).
+	if (!isValidAvatar(avatar ?? null)) throw new Error('Invalid avatar');
 	const rows = await db
 		.insert(players)
 		.values({ name, avatar: avatar ?? null, email: email ? email.trim().toLowerCase() : null })
@@ -77,7 +81,12 @@ export async function updatePlayerProfile(
 ): Promise<void> {
 	const set: Partial<typeof players.$inferInsert> = {};
 	if (patch.name !== undefined) set.name = patch.name.trim();
-	if (patch.avatar !== undefined) set.avatar = patch.avatar || null;
+	if (patch.avatar !== undefined) {
+		const avatar = patch.avatar || null;
+		// Last line of defence against a bad avatar reaching the DB (see addPlayer).
+		if (!isValidAvatar(avatar)) throw new Error('Invalid avatar');
+		set.avatar = avatar;
+	}
 	if (Object.keys(set).length) await db.update(players).set(set).where(eq(players.id, id));
 }
 

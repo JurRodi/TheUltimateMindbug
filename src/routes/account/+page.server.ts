@@ -3,7 +3,8 @@ import { db } from '$lib/server/db';
 import { getPlayers, getAllGames, updatePlayerProfile } from '$lib/server/db/queries';
 import { computeRatings } from '$lib/rating/engine';
 import { playerStats } from '$lib/stats/aggregate';
-import { creatureFor } from '$lib/creatures';
+import { creatureFor, isValidAvatar } from '$lib/creatures';
+import { normalizeName, MAX_NAME_LEN } from '$lib/validation';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -46,9 +47,10 @@ export const actions: Actions = {
 		if (!me) throw redirect(303, '/login');
 
 		const form = await request.formData();
-		const name = String(form.get('name') ?? '').trim();
+		const name = normalizeName(String(form.get('name') ?? ''));
 		const avatar = String(form.get('avatar') ?? '').trim() || null;
-		if (!name) return fail(400, { error: 'Name required' });
+		if (!name) return fail(400, { error: `Enter a name (max ${MAX_NAME_LEN} characters)` });
+		if (!isValidAvatar(avatar)) return fail(400, { error: 'Invalid avatar' });
 
 		try {
 			await updatePlayerProfile(db, me.id, { name, avatar });

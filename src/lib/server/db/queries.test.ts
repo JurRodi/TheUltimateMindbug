@@ -96,10 +96,10 @@ describe('player identity queries', () => {
 	it('updatePlayerProfile trims the name and clears a blank avatar', async () => {
 		const db = await makeTestDb();
 		const p = await addPlayer(db, 'Sam', '🦍');
-		await updatePlayerProfile(db, p.id, { name: '  Samuel  ', avatar: '🦊' });
+		await updatePlayerProfile(db, p.id, { name: '  Samuel  ', avatar: '🦁' });
 		let got = await getPlayer(db, p.id);
 		expect(got?.name).toBe('Samuel');
-		expect(got?.avatar).toBe('🦊');
+		expect(got?.avatar).toBe('🦁');
 		// A blank avatar clears back to null (deterministic fallback); email/admin untouched.
 		await updatePlayerProfile(db, p.id, { avatar: '' });
 		got = await getPlayer(db, p.id);
@@ -112,6 +112,15 @@ describe('player identity queries', () => {
 		await addPlayer(db, 'Taken');
 		const p = await addPlayer(db, 'Mine');
 		await expect(updatePlayerProfile(db, p.id, { name: 'Taken' })).rejects.toBeTruthy();
+	});
+
+	it('rejects an avatar outside the allow-list before it reaches the DB', async () => {
+		const db = await makeTestDb();
+		await expect(addPlayer(db, 'Mallory', '🍕')).rejects.toThrow(/invalid avatar/i);
+		const p = await addPlayer(db, 'Trent', '🦍');
+		await expect(updatePlayerProfile(db, p.id, { avatar: '🍕' })).rejects.toThrow(
+			/invalid avatar/i
+		);
 	});
 });
 
