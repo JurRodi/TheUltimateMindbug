@@ -25,7 +25,7 @@
 </script>
 
 <nav>
-	<div class="brand"><span class="bug">🐛</span> Mindbug</div>
+	<div class="brand"><img class="bug" src="/icons/favicon-256.png" alt="" /> Mindbug</div>
 	{#each links as l (l.href)}
 		<a href={resolve(l.href)} class:on={isActive(l.href)}>
 			<span class="icon">{l.icon}</span><span class="label">{l.label}</span>
@@ -136,7 +136,9 @@
 			margin-bottom: 1rem;
 		}
 		.brand .bug {
-			font-size: 1.35rem;
+			height: 1.7rem;
+			width: auto;
+			flex: none;
 		}
 		a {
 			flex-direction: row;

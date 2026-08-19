@@ -99,7 +99,10 @@
 
 {#if toast}<Toast message={toast} ondone={() => (toast = null)} />{/if}
 
-<h1>The Ultimate Mindbug 🐛</h1>
+<div class="title">
+	<h1>The Ultimate Mindbug</h1>
+	<img src="/icons/favicon-256.png" alt="" />
+</div>
 
 <!-- Mobile: the filter bar collapses to a summary pill (tap to reveal the
      controls). Desktop hides the summary and shows BoardFilters inline as before. -->
@@ -273,6 +276,22 @@
 {/if}
 
 <style>
+	.title {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+	.title img {
+		height: 32px;
+		width: auto;
+		flex: none;
+	}
+	@media (min-width: 640px) {
+		.title img {
+			height: 48px;
+		}
+	}
+
 	.tiles {
 		display: grid;
 		grid-template-columns: 1fr;
