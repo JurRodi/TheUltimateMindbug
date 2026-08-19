@@ -1,6 +1,15 @@
 import { env } from '$env/dynamic/public';
 
-export type EnableResult = { ok: true } | { ok: false; reason: string };
+/** Categories of enable failure, so the UI can show the right help. */
+export type PushErrorKind =
+	| 'unsupported' // browser has no Push/ServiceWorker support
+	| 'unconfigured' // server missing VAPID key
+	| 'permission' // user hasn't granted (or has blocked) notifications
+	| 'push-service' // browser refused the push service (e.g. Brave's Google push off)
+	| 'server' // our /api/push/subscribe rejected it
+	| 'unknown';
+
+export type EnableResult = { ok: true } | { ok: false; reason: string; kind: PushErrorKind };
 
 function urlBase64ToUint8Array(base64: string): Uint8Array<ArrayBuffer> {
 	const padding = '='.repeat((4 - (base64.length % 4)) % 4);
@@ -40,21 +49,27 @@ export async function getPushState(): Promise<
 
 export async function enablePush(): Promise<EnableResult> {
 	if (!pushSupported())
-		return { ok: false, reason: "This browser doesn't support push notifications." };
+		return {
+			ok: false,
+			kind: 'unsupported',
+			reason: "This browser can't show notifications."
+		};
 	if (!env.PUBLIC_VAPID_KEY)
 		return {
 			ok: false,
-			reason: 'Notifications are not configured on the server (missing VAPID key).'
+			kind: 'unconfigured',
+			reason: "Notifications aren't set up yet — let the admin know."
 		};
 	try {
 		const perm = await Notification.requestPermission();
 		if (perm !== 'granted')
 			return {
 				ok: false,
+				kind: 'permission',
 				reason:
 					perm === 'denied'
-						? 'Notifications are blocked. Enable them in your browser/site settings, then try again.'
-						: 'Notification permission was not granted.'
+						? 'Notifications are blocked for this site.'
+						: "You didn't allow notifications."
 			};
 
 		const reg = await navigator.serviceWorker.ready;
@@ -83,17 +98,34 @@ export async function enablePush(): Promise<EnableResult> {
 		if (!res.ok) {
 			return {
 				ok: false,
+				kind: 'server',
 				reason:
 					res.status === 401
-						? "Couldn't save the subscription — you may need to sign in again."
-						: `Couldn't save the subscription (server returned ${res.status}).`
+						? 'Please sign in again to turn on notifications.'
+						: `Couldn't save your subscription (error ${res.status}). Please try again.`
 			};
 		}
 		return { ok: true };
 	} catch (err) {
 		const e = err as { name?: string; message?: string };
 		console.error('[push] enable failed', e);
-		return { ok: false, reason: `Couldn't subscribe: ${e.name ?? 'Error'} — ${e.message ?? err}` };
+		// Brave (and other Chromium browsers with the push service disabled) reject
+		// registration with AbortError / "push service error". Treat that specially so
+		// the UI can point the user at the right browser setting.
+		const isPushService =
+			e.name === 'AbortError' ||
+			/push service/i.test(e.message ?? '') ||
+			e.name === 'NotAllowedError';
+		if (e.name === 'NotAllowedError') {
+			return { ok: false, kind: 'permission', reason: 'Notifications are blocked for this site.' };
+		}
+		return {
+			ok: false,
+			kind: isPushService ? 'push-service' : 'unknown',
+			reason: isPushService
+				? "Your browser's notification service is turned off."
+				: "Couldn't turn on notifications — something went wrong."
+		};
 	}
 }
 

@@ -1,7 +1,10 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { getPushState, enablePush, pushSupported } from '$lib/push-client';
+	import { getPushState, pushSupported } from '$lib/push-client';
+	import { createPushEnabler } from '$lib/push-ui.svelte';
+	import PushHelpDialog from './PushHelpDialog.svelte';
 
+	const push = createPushEnabler();
 	let show = $state(false);
 
 	onMount(async () => {
@@ -16,9 +19,8 @@
 	}
 
 	async function enable() {
-		const res = await enablePush();
-		if (res.ok) show = false;
-		// On failure, leave the banner up; the /account toggle surfaces the reason.
+		// On failure the enabler opens the help dialog; the banner stays up to retry.
+		if (await push.enable()) show = false;
 	}
 </script>
 
@@ -42,6 +44,8 @@
 		<button class="x" aria-label="Dismiss" onclick={dismiss}>✕</button>
 	</div>
 {/if}
+
+<PushHelpDialog bind:open={push.helpOpen} kind={push.helpKind} />
 
 <style>
 	.pushbanner {
