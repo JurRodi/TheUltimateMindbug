@@ -17,7 +17,7 @@
 
 	// Candidates exclude the voter — you can't vote for yourself.
 	const candidatesFor = (r: (typeof data.openRounds)[number]) =>
-		[...r.us, ...r.them].filter((p) => p.id !== data.me);
+		[...r.us, ...r.them].filter((p) => p.id !== data.myId);
 
 	// "us" is always rendered first (the viewer's own team); the connecting word
 	// reflects the real result instead of assuming a win. Accepts either an open
@@ -86,8 +86,8 @@
 				<div class="matchup">
 					<span class="teamgrp us">
 						{#each r.us as p (p.id)}
-							<span class="pchip" class:you={p.id === data.me}>
-								<span class="em">{p.emoji}</span>{p.id === data.me ? 'You' : p.name}
+							<span class="pchip" class:you={p.id === data.myId}>
+								<span class="em">{p.emoji}</span>{p.id === data.myId ? 'You' : p.name}
 							</span>
 						{/each}
 					</span>
@@ -187,8 +187,8 @@
 				<div class="matchup">
 					<span class="teamgrp us">
 						{#each r.us as p (p.id)}
-							<span class="pchip" class:you={p.id === data.me}>
-								<span class="em">{p.emoji}</span>{p.id === data.me ? 'You' : p.name}
+							<span class="pchip" class:you={p.id === data.myId}>
+								<span class="em">{p.emoji}</span>{p.id === data.myId ? 'You' : p.name}
 							</span>
 						{/each}
 					</span>

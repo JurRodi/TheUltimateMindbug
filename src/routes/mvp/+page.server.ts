@@ -22,7 +22,10 @@ export const load: PageServerLoad = async ({ locals }) => {
 		player ? getOpenRoundsForPlayer(db, player.id) : Promise.resolve([]),
 		player ? getMyOpenVotes(db, player.id) : Promise.resolve([])
 	]);
-	return { openRounds, votedRounds, results, me: player?.id ?? null };
+	// NB: name this `myId`, not `me` — the layout load already exposes `me` (the
+	// player object the Nav uses for the avatar), and page data merges over layout
+	// data, so reusing `me` here would clobber it and blank the nav avatar.
+	return { openRounds, votedRounds, results, myId: player?.id ?? null };
 };
 
 export const actions: Actions = {
