@@ -56,7 +56,11 @@
 </script>
 
 <h1>Games 🎲</h1>
-<p class="sub">Delete a mistaken or joke game. Permanent — ratings recompute automatically.</p>
+{#if data.isAdmin}
+	<p class="sub">Delete a mistaken or joke game. Permanent — ratings recompute automatically.</p>
+{:else}
+	<p class="sub">Every game logged, newest first.</p>
+{/if}
 
 {#if toast}<Toast message={toast} ondone={() => (toast = null)} />{/if}
 
@@ -99,37 +103,39 @@
 						</span>
 					</div>
 				</div>
-				<div class="actions">
-					{#if confirmingId === g.id}
-						<form
-							method="POST"
-							action="?/delete"
-							use:enhance={() => {
-								deletingId = g.id;
-								return async ({ result, update }) => {
-									await update();
-									deletingId = null;
-									confirmingId = null;
-									if (result.type === 'success') toast = 'Game deleted ✓';
-								};
-							}}
-						>
-							<input type="hidden" name="id" value={g.id} />
-							<span class="q">Delete?</span>
-							<button class="btn danger" type="submit" disabled={deletingId === g.id}>
-								{#if deletingId === g.id}<span class="spin" aria-hidden="true"
-									></span>{:else}Yes{/if}
-							</button>
-							<button class="btn secondary" type="button" onclick={() => (confirmingId = null)}
-								>Cancel</button
+				{#if data.isAdmin}
+					<div class="actions">
+						{#if confirmingId === g.id}
+							<form
+								method="POST"
+								action="?/delete"
+								use:enhance={() => {
+									deletingId = g.id;
+									return async ({ result, update }) => {
+										await update();
+										deletingId = null;
+										confirmingId = null;
+										if (result.type === 'success') toast = 'Game deleted ✓';
+									};
+								}}
 							>
-						</form>
-					{:else}
-						<button class="btn secondary" type="button" onclick={() => (confirmingId = g.id)}
-							>🗑 Delete</button
-						>
-					{/if}
-				</div>
+								<input type="hidden" name="id" value={g.id} />
+								<span class="q">Delete?</span>
+								<button class="btn danger" type="submit" disabled={deletingId === g.id}>
+									{#if deletingId === g.id}<span class="spin" aria-hidden="true"
+										></span>{:else}Yes{/if}
+								</button>
+								<button class="btn secondary" type="button" onclick={() => (confirmingId = null)}
+									>Cancel</button
+								>
+							</form>
+						{:else}
+							<button class="btn secondary" type="button" onclick={() => (confirmingId = g.id)}
+								>🗑 Delete</button
+							>
+						{/if}
+					</div>
+				{/if}
 			</div>
 		{/each}
 	</div>

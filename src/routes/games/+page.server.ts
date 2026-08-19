@@ -9,7 +9,8 @@ import type { Actions, PageServerLoad } from './$types';
 const PAGE_SIZE = 12;
 
 export const load: PageServerLoad = async ({ locals, url }) => {
-	requireAdmin(locals.auth);
+	// Public page: anyone can browse the game history. The delete action below
+	// stays admin-only, and the delete UI is hidden for non-admins client-side.
 	const [players, games] = await Promise.all([getPlayers(db), getAllGames(db)]);
 	const nameById = new Map(players.map((p) => [p.id, p.name]));
 	const avatarById = new Map(players.map((p) => [p.id, p.avatar]));
@@ -62,7 +63,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		total: paged.total,
 		range,
 		from: fromParam ?? '',
-		to: toParam ?? ''
+		to: toParam ?? '',
+		isAdmin: locals.auth.isAdmin
 	};
 };
 
