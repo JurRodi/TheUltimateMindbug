@@ -1,5 +1,5 @@
 <script lang="ts">
-	type Chip = { text: string; tone?: 'w' | 'l' | 'none' };
+	type Chip = { text: string; tone?: 'w' | 'l' | 'none' | 'mvp' };
 	let {
 		rank,
 		emoji,

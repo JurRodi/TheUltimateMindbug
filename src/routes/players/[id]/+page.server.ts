@@ -1,6 +1,6 @@
 import { error } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
-import { getPlayer, getPlayers, getAllGames } from '$lib/server/db/queries';
+import { getPlayer, getPlayers, getAllGames, getMvpCounts } from '$lib/server/db/queries';
 import { computeRatings } from '$lib/rating/engine';
 import { playerStats, playerGameLog } from '$lib/stats/aggregate';
 import { creatureFor } from '$lib/creatures';
@@ -13,10 +13,11 @@ export const load: PageServerLoad = async ({ params }) => {
 	const id = Number(params.id);
 	if (!Number.isInteger(id)) throw error(404, 'Player not found');
 
-	const [player, players, games] = await Promise.all([
+	const [player, players, games, mvpCounts] = await Promise.all([
 		getPlayer(db, id),
 		getPlayers(db),
-		getAllGames(db)
+		getAllGames(db),
+		getMvpCounts(db)
 	]);
 	if (!player) throw error(404, 'Player not found');
 
@@ -74,6 +75,7 @@ export const load: PageServerLoad = async ({ params }) => {
 		rankTotal,
 		series,
 		stats,
-		history
+		history,
+		mvps: mvpCounts.get(id) ?? 0
 	};
 };

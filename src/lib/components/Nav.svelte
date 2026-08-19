@@ -3,13 +3,14 @@
 	import { resolve } from '$app/paths';
 	import { creatureFor } from '$lib/creatures';
 	const board = { href: '/', label: 'Board', icon: '📊' } as const;
+	const mvp = { href: '/mvp', label: 'MVP', icon: '⭐' } as const;
 	const players = { href: '/players', label: 'Players', icon: '👾' } as const;
 	const log = { href: '/log', label: 'Log', icon: '➕' } as const;
 	const games = { href: '/games', label: 'Games', icon: '🎲' } as const;
 	// Players and Games are admin-only management pages; both are requireAdmin-gated
 	// server-side, so hiding them here is convenience, not the security boundary.
 	// (Public player detail still lives at /players/[id], linked from the board.)
-	const links = $derived(page.data.isAdmin ? [board, players, log, games] : [board, log]);
+	const links = $derived(page.data.isAdmin ? [board, mvp, players, log, games] : [board, mvp, log]);
 	// Match on a path boundary, not a bare prefix: a bare `startsWith('/log')`
 	// also matches `/login`, so the Log tab lit up on the sign-in page. Active =
 	// the exact route or a sub-path of it (e.g. Players stays active on /players/3).

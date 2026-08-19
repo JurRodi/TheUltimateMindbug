@@ -2,6 +2,7 @@ import { fail, redirect } from '@sveltejs/kit';
 import { requireAuth } from '$lib/server/authz';
 import { db } from '$lib/server/db';
 import { getPlayers, insertGame } from '$lib/server/db/queries';
+import { onGameLogged } from '$lib/server/mvp';
 import { parseTimestamp } from '$lib/validation';
 import type { Format, Side } from '$lib/types';
 import type { Actions, PageServerLoad } from './$types';
@@ -40,13 +41,18 @@ export const actions: Actions = {
 		if (!all.every((id) => activeIds.has(id)))
 			return fail(400, { error: 'Unknown or inactive player' });
 
-		await insertGame(db, {
+		const gameId = await insertGame(db, {
 			playedAt,
 			format,
 			winnerSide,
 			sideA,
 			sideB
 		});
+		try {
+			await onGameLogged(db, gameId, format, playedAt);
+		} catch (err) {
+			console.error('[mvp] onGameLogged failed for game', gameId, err);
+		}
 		throw redirect(303, '/?saved=game');
 	}
 };

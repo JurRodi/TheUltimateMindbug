@@ -4,6 +4,7 @@
 	import { onNavigate } from '$app/navigation';
 	import Nav from '$lib/components/Nav.svelte';
 	import NavProgress from '$lib/components/NavProgress.svelte';
+	import EnablePushBanner from '$lib/components/EnablePushBanner.svelte';
 	let { children } = $props();
 	// The board (home route) has a two-column board+aside layout, so it gets a
 	// wider max-width on desktop; the form/list pages stay a narrower reading width.
@@ -31,6 +32,7 @@
 	<Nav />
 	<main>
 		<div class="wrap" class:wide>
+			{#if page.data.me}<EnablePushBanner />{/if}
 			{@render children()}
 		</div>
 	</main>

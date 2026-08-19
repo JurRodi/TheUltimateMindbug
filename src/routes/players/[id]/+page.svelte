@@ -49,6 +49,11 @@
 				<span class="n">{pct(overall.winRate)}</span><span class="l">Win rate</span>
 			</div>
 			<div class="stat"><span class="n">{overall.games}</span><span class="l">Games</span></div>
+			{#if data.mvps > 0}
+				<div class="stat mvp">
+					<span class="n">{data.mvps}</span><span class="l">MVPs</span>
+				</div>
+			{/if}
 			{#if overall.games > 0}
 				<span class="chip {overall.streak > 0 ? 'w' : overall.streak < 0 ? 'l' : 'none'}"
 					>{streakText(overall.streak)}</span

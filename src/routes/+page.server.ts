@@ -1,5 +1,5 @@
 import { db } from '$lib/server/db';
-import { getPlayers, getAllGames } from '$lib/server/db/queries';
+import { getPlayers, getAllGames, getMvpCounts } from '$lib/server/db/queries';
 import { computeRatings } from '$lib/rating/engine';
 import { allPlayerStats } from '$lib/stats/aggregate';
 import { teamStats } from '$lib/stats/teams';
@@ -30,8 +30,14 @@ export const load: PageServerLoad = async ({ url, cookies }) => {
 		maxAge: 60 * 60 * 24 * 365
 	});
 	const now = new Date();
+	const weekAgoIso = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
-	const [players, games] = await Promise.all([getPlayers(db), getAllGames(db)]);
+	const [players, games, mvpCounts, weeklyMvpCounts] = await Promise.all([
+		getPlayers(db),
+		getAllGames(db),
+		getMvpCounts(db),
+		getMvpCounts(db, weekAgoIso)
+	]);
 	const nameById = new Map(players.map((p) => [p.id, p.name]));
 	const avatarById = new Map(players.map((p) => [p.id, p.avatar]));
 
@@ -55,7 +61,8 @@ export const load: PageServerLoad = async ({ url, cookies }) => {
 				games: s.games,
 				wins: s.wins,
 				winRate: s.winRate,
-				streak: s.streak
+				streak: s.streak,
+				mvps: mvpCounts.get(p.id) ?? 0
 			};
 		})
 		.sort((a, b) => (a.rated === b.rated ? b.rating - a.rating : a.rated ? -1 : 1));
@@ -64,8 +71,18 @@ export const load: PageServerLoad = async ({ url, cookies }) => {
 	const teams = teamStats(games, { track: format, range, now }).map((t) => ({
 		...t,
 		names: t.playerIds.map((id) => nameById.get(id) ?? `#${id}`),
-		avatars: t.playerIds.map((id) => avatarById.get(id) ?? null)
+		avatars: t.playerIds.map((id) => avatarById.get(id) ?? null),
+		mvps: t.playerIds.reduce((sum, id) => sum + (mvpCounts.get(id) ?? 0), 0)
 	}));
+
+	// MVP of the week: the player with the most MVP wins from games played in the
+	// last 7 days (null if none awarded this week). Ties resolve to the first max.
+	let weeklyMvp: { name: string; count: number } | null = null;
+	for (const [id, count] of weeklyMvpCounts) {
+		if (!weeklyMvp || count > weeklyMvp.count) {
+			weeklyMvp = { name: nameById.get(id) ?? `#${id}`, count };
+		}
+	}
 
 	// "This week" summary card. Always the last 7 days (independent of the range
 	// filter) for the currently selected format track.
@@ -78,7 +95,8 @@ export const load: PageServerLoad = async ({ url, cookies }) => {
 					name: nameById.get(summary.biggestClimb.playerId) ?? `#${summary.biggestClimb.playerId}`,
 					gain: Math.round(summary.biggestClimb.gain)
 				}
-			: null
+			: null,
+		mvp: weeklyMvp
 	};
 
 	return { view, format, range, rows, teams, weekly };

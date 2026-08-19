@@ -5,6 +5,7 @@
 	import { authClient } from '$lib/auth-client';
 	import { CREATURES, creatureFor } from '$lib/creatures';
 	import Toast from '$lib/components/Toast.svelte';
+	import NotificationToggle from '$lib/components/NotificationToggle.svelte';
 
 	let { data, form } = $props();
 
@@ -99,6 +100,11 @@
 	</div>
 	{#if form?.error}<p class="err">{form.error}</p>{/if}
 </form>
+
+<h2>Notifications</h2>
+<div class="card">
+	<NotificationToggle />
+</div>
 
 <div class="signout-row">
 	<span class="hint"

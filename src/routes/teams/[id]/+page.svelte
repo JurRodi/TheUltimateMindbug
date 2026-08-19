@@ -24,6 +24,9 @@
 		<div class="hero-top">
 			<h1>{data.members.map((m) => m.name).join(' + ')}</h1>
 			<span class="fmtbadge">{data.format} TEAM</span>
+			{#if data.mvps > 0}
+				<span class="chip mvp">{data.mvps} MVP</span>
+			{/if}
 			<span class="rank">#{data.rank} of {data.rankTotal} teams</span>
 		</div>
 		<div class="statrow">

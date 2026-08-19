@@ -25,6 +25,10 @@ export default defineConfig({
 				test: {
 					name: 'server',
 					environment: 'node',
+					// Server tests spin up a fresh pglite instance per `makeTestDb()` and
+					// apply every Drizzle migration; under parallel load that can exceed
+					// vitest's default 5s (e.g. the migration smoke test). Give them room.
+					testTimeout: 20000,
 					include: ['src/**/*.{test,spec}.{js,ts}'],
 					exclude: ['src/**/*.svelte.{test,spec}.{js,ts}']
 				}

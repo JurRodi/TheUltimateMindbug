@@ -29,6 +29,15 @@
 			: s < 0
 				? { text: `L${-s}`, tone: 'l' as const }
 				: { text: '–', tone: 'none' as const };
+	const mvpChips = (n: number) => (n > 0 ? [{ text: `${n} MVP`, tone: 'mvp' as const }] : []);
+	// Win% chip: green above 50%, red below, neutral at exactly 50% (or no games).
+	const winPctChip = (winRate: number, games: number) => {
+		const p = Math.round(winRate * 100);
+		const text = `${p}%`;
+		return games === 0 || p === 50
+			? { text }
+			: { text, tone: p > 50 ? ('w' as const) : ('l' as const) };
+	};
 
 	const podiumItems = $derived(
 		data.rows.slice(0, 3).map((r, i) => ({
@@ -37,7 +46,12 @@
 			name: r.player.name,
 			power: r.rated ? r.rating : '—',
 			powerLabel: r.rated ? 'RATING' : 'UNRATED',
-			chips: [{ text: `${r.games} GP` }, { text: pct(r.winRate) }, streakChip(r.streak)],
+			chips: [
+				{ text: `${r.games} GP` },
+				winPctChip(r.winRate, r.games),
+				streakChip(r.streak),
+				...mvpChips(r.mvps)
+			],
 			href: resolve('/players/[id]', { id: String(r.player.id) })
 		}))
 	);
@@ -69,7 +83,7 @@
 
 	// Aside cards.
 	const champ = $derived(data.rows[0] ?? null);
-	const champStreak = (s: number) => (s > 0 ? `W${s} 🔥` : s < 0 ? `L${-s}` : '–');
+	const champStreak = (s: number) => (s > 0 ? `W${s}` : s < 0 ? `L${-s}` : '–');
 	const deltaText = (d: number) => (d > 0 ? `▲ ${d}` : d < 0 ? `▼ ${-d}` : '–');
 
 	// Collapsed-filter summary shown on mobile (the full controls live inside the
@@ -137,6 +151,7 @@
 							<div class="row">
 								<span>record</span><span>{topTeam.wins}W · {topTeam.losses}L</span>
 							</div>
+							<div class="row"><span>MVPs</span><span>{topTeam.mvps}</span></div>
 						</div>
 					</details>
 				{/if}
@@ -157,6 +172,9 @@
 									: '–'}</span
 							>
 						</div>
+						<div class="row">
+							<span>MVP of week</span><span>{data.weekly.mvp ? data.weekly.mvp.name : '–'}</span>
+						</div>
 					</div>
 				</details>
 				<details class="info card-collapse">
@@ -164,7 +182,8 @@
 					<div class="cc-body">
 						<div class="legend">
 							<span class="chip">40 GP</span> games · <span class="chip w">18W</span> wins ·
-							<span class="chip l">7L</span> losses · <b style="color: #fff">72%</b> win rate
+							<span class="chip l">7L</span> losses · <b style="color: #fff">72%</b> win rate ·
+							<span class="chip mvp">3 MVP</span> most valuable plays
 						</div>
 						<p class="rule-note">Teams need 3+ games to rank on win rate.</p>
 					</div>
@@ -184,7 +203,12 @@
 						rank={i + 4}
 						emoji={creatureFor(r.player.id, r.player.avatar)}
 						name={r.player.name}
-						chips={[{ text: `${r.games} GP` }, { text: pct(r.winRate) }, streakChip(r.streak)]}
+						chips={[
+							{ text: `${r.games} GP` },
+							winPctChip(r.winRate, r.games),
+							streakChip(r.streak),
+							...mvpChips(r.mvps)
+						]}
 						power={r.rated ? r.rating : '—'}
 						powerLabel={r.rated ? 'RATING' : 'UNRATED'}
 						href={resolve('/players/[id]', { id: String(r.player.id) })}
@@ -207,6 +231,7 @@
 							<span>rating</span><span>{champ.rated ? champ.rating : '—'}</span>
 						</div>
 						<div class="row"><span>streak</span><span>{champStreak(champ.streak)}</span></div>
+						<div class="row"><span>MVPs</span><span>{champ.mvps}</span></div>
 					</div>
 				</details>
 			{/if}
@@ -227,6 +252,9 @@
 								: '–'}</span
 						>
 					</div>
+					<div class="row">
+						<span>MVP of week</span><span>{data.weekly.mvp ? data.weekly.mvp.name : '–'}</span>
+					</div>
 				</div>
 			</details>
 			<details class="info card-collapse">
@@ -235,7 +263,8 @@
 					<div class="legend">
 						<span class="chip">40 GP</span> games · <span class="chip">64%</span> win rate ·
 						<span class="chip w">W5</span> win streak · <span class="chip l">L3</span> loss streak ·
-						<span class="chip none">–</span> none · <b style="color: #fff">1187</b> rating
+						<span class="chip none">–</span> none · <b style="color: #fff">1187</b> rating ·
+						<span class="chip mvp">3 MVP</span> most valuable plays
 					</div>
 				</div>
 			</details>
@@ -404,6 +433,15 @@
 	}
 	.cc-body {
 		margin-top: 0.6rem;
+	}
+	/* Stat rows: uniform height, with a tidy tabular value column. */
+	.cc-body .row {
+		align-items: center;
+		min-height: 1.5rem;
+	}
+	.cc-body .row span:last-child {
+		font-variant-numeric: tabular-nums;
+		line-height: 1.2;
 	}
 
 	/* Animate expand/collapse for every collapsible on mobile. height transitions

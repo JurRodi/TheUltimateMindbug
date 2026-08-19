@@ -141,6 +141,10 @@ a {
 .chip.none {
 	opacity: 0.75;
 }
+.chip.mvp {
+	background: #f7e3a0;
+	color: #8a6414;
+}
 
 /* board aside: champion / this-week / legend info cards (on the dark mat) */
 .aside {

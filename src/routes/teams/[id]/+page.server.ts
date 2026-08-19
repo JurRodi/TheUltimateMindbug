@@ -1,6 +1,6 @@
 import { error } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
-import { getPlayers, getAllGames } from '$lib/server/db/queries';
+import { getPlayers, getAllGames, getMvpCounts } from '$lib/server/db/queries';
 import { teamStats, teamGameLog, teamNetSeries, teamStreak } from '$lib/stats/teams';
 import { creatureFor } from '$lib/creatures';
 import type { PageServerLoad } from './$types';
@@ -10,7 +10,11 @@ export const load: PageServerLoad = async ({ params }) => {
 	if (ids.length < 2 || ids.some((n) => !Number.isInteger(n))) throw error(404, 'Team not found');
 	const key = [...ids].sort((a, b) => a - b).join('-');
 
-	const [players, games] = await Promise.all([getPlayers(db), getAllGames(db)]);
+	const [players, games, mvpCounts] = await Promise.all([
+		getPlayers(db),
+		getAllGames(db),
+		getMvpCounts(db)
+	]);
 	const now = new Date();
 	const teams = teamStats(games, { track: 'total', range: 'all', now });
 	const rankIndex = teams.findIndex((t) => t.playerIds.join('-') === key);
@@ -34,6 +38,8 @@ export const load: PageServerLoad = async ({ params }) => {
 		opponents: e.opponentIds.map(resolve)
 	}));
 
+	const mvps = team.playerIds.reduce((sum, id) => sum + (mvpCounts.get(id) ?? 0), 0);
+
 	return {
 		key,
 		members: team.playerIds.map(resolve),
@@ -44,6 +50,7 @@ export const load: PageServerLoad = async ({ params }) => {
 		netRecord: team.wins - team.losses,
 		streak: teamStreak(games, team.playerIds),
 		series: teamNetSeries(games, team.playerIds),
-		history
+		history,
+		mvps
 	};
 };
