@@ -16,7 +16,9 @@
 	}
 
 	async function enable() {
-		if (await enablePush()) show = false;
+		const res = await enablePush();
+		if (res.ok) show = false;
+		// On failure, leave the banner up; the /account toggle surfaces the reason.
 	}
 </script>
 
