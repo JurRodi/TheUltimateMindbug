@@ -310,7 +310,28 @@ export type OpenRound = {
 	winnerSide: Side;
 	us: Member[];
 	them: Member[];
+	/** Participant ids who have already cast a ballot in this round — drives the
+	    live turnout ("X of Y voted") and the ✓ on each voter's chip. Never leaks
+	    who they voted for. */
+	voterIds: number[];
 };
+
+/** Voter ids per game, for the given games — the turnout behind an open round.
+    Returns an empty map for an empty input rather than issuing a query. */
+async function voterIdsByGame(db: DB, gameIds: number[]): Promise<Map<number, number[]>> {
+	if (gameIds.length === 0) return new Map();
+	const rows = await db
+		.select({ gameId: mvpVotes.gameId, voterId: mvpVotes.voterId })
+		.from(mvpVotes)
+		.where(inArray(mvpVotes.gameId, gameIds));
+	const map = new Map<number, number[]>();
+	for (const r of rows) {
+		const list = map.get(r.gameId) ?? [];
+		list.push(r.voterId);
+		map.set(r.gameId, list);
+	}
+	return map;
+}
 
 /** Rounds still open, for games this player took part in, where they have not
     voted yet — the set of ballots a player still needs to cast. */
@@ -346,10 +367,11 @@ export async function getOpenRoundsForPlayer(db: DB, playerId: number): Promise<
 		);
 	const votedSet = new Set(voted.map((v) => v.gameId));
 	const pending = rows.filter((r) => !votedSet.has(r.gameId));
-	const members = await membersByGame(
-		db,
-		pending.map((r) => r.gameId)
-	);
+	const pendingIds = pending.map((r) => r.gameId);
+	const [members, voters] = await Promise.all([
+		membersByGame(db, pendingIds),
+		voterIdsByGame(db, pendingIds)
+	]);
 	return pending.map((r) => {
 		const all = members.get(r.gameId) ?? [];
 		return {
@@ -364,7 +386,8 @@ export async function getOpenRoundsForPlayer(db: DB, playerId: number): Promise<
 				.map((m) => ({ id: m.playerId, name: m.name, emoji: m.emoji })),
 			them: all
 				.filter((m) => m.side !== r.side)
-				.map((m) => ({ id: m.playerId, name: m.name, emoji: m.emoji }))
+				.map((m) => ({ id: m.playerId, name: m.name, emoji: m.emoji })),
+			voterIds: voters.get(r.gameId) ?? []
 		};
 	});
 }
@@ -379,6 +402,9 @@ export type MyOpenVote = {
 	us: Member[];
 	them: Member[];
 	myVote: Member | null;
+	/** Participant ids who have already voted in this round (includes the viewer).
+	    Same turnout signal as OpenRound.voterIds. */
+	voterIds: number[];
 };
 
 /** Open rounds the player is in AND has already voted on, with their own pick. */
@@ -402,10 +428,11 @@ export async function getMyOpenVotes(db: DB, playerId: number): Promise<MyOpenVo
 		.innerJoin(mvpVotes, and(eq(mvpVotes.gameId, mvpRounds.gameId), eq(mvpVotes.voterId, playerId)))
 		.where(eq(mvpRounds.status, 'open'));
 	if (rows.length === 0) return [];
-	const members = await membersByGame(
-		db,
-		rows.map((r) => r.gameId)
-	);
+	const gameIds = rows.map((r) => r.gameId);
+	const [members, voters] = await Promise.all([
+		membersByGame(db, gameIds),
+		voterIdsByGame(db, gameIds)
+	]);
 	return rows.map((r) => {
 		const all = members.get(r.gameId) ?? [];
 		const toMember = (m: GameMember): Member => ({ id: m.playerId, name: m.name, emoji: m.emoji });
@@ -418,7 +445,8 @@ export async function getMyOpenVotes(db: DB, playerId: number): Promise<MyOpenVo
 			winnerSide: r.winnerSide,
 			us: all.filter((m) => m.side === r.side).map(toMember),
 			them: all.filter((m) => m.side !== r.side).map(toMember),
-			myVote: all.map(toMember).find((m) => m.id === r.nomineeId) ?? null
+			myVote: all.map(toMember).find((m) => m.id === r.nomineeId) ?? null,
+			voterIds: voters.get(r.gameId) ?? []
 		};
 	});
 }

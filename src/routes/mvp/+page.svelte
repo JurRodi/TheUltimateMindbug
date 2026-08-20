@@ -15,6 +15,11 @@
 	// One radio selection per open round, keyed by gameId.
 	let picked = $state<Record<number, number | undefined>>({});
 
+	// Whether a given player has already cast a ballot in a round — drives both
+	// the ✓ badge on their chip and the live turnout count. Works for open and
+	// voted rounds alike (both carry `voterIds`).
+	const didVote = (voterIds: number[], id: number) => voterIds.includes(id);
+
 	// Candidates exclude the voter — you can't vote for yourself.
 	const candidatesFor = (r: (typeof data.openRounds)[number]) =>
 		[...r.us, ...r.them].filter((p) => p.id !== data.myId);
@@ -27,7 +32,7 @@
 	// Static quorum figure: how many of the game's participants need to vote before
 	// the round can resolve. A fixed fact about the round (not a live tally), so it
 	// leaks nothing.
-	const quorum = (r: (typeof data.openRounds)[number]) => {
+	const quorum = (r: { us: unknown[]; them: unknown[] }) => {
 		const total = r.us.length + r.them.length;
 		return { needed: Math.ceil(total / 2), total };
 	};
@@ -36,16 +41,25 @@
 	let expanded = $state(false);
 	const shownResults = $derived(expanded ? data.results : data.results.slice(0, 5));
 
+	// In-flight vote submissions, keyed by gameId, so each ballot shows its own
+	// button spinner without disabling the others.
+	let submitting = $state<Record<number, boolean>>({});
+
 	// On a successful vote, run the default enhance behavior — which re-runs `load`,
 	// so the round leaves "Awaiting" (count drops) and reappears under "Voted" — then
-	// show a confirmation toast.
+	// show a confirmation toast. `submitting` gates the button while the request is
+	// in flight (set true when the form submits, cleared once `update()` resolves).
 	let toast = $state<string | null>(null);
-	const voteEnhance: SubmitFunction = () => {
-		return async ({ result, update }) => {
-			await update();
-			if (result.type === 'success') toast = 'Vote locked in ✓';
+	const voteEnhance =
+		(gameId: number): SubmitFunction =>
+		() => {
+			submitting[gameId] = true;
+			return async ({ result, update }) => {
+				await update();
+				submitting[gameId] = false;
+				if (result.type === 'success') toast = 'Vote locked in ✓';
+			};
 		};
-	};
 </script>
 
 {#if toast}<Toast message={toast} ondone={() => (toast = null)} />{/if}
@@ -61,7 +75,7 @@
 	<div class="stack">
 		{#each data.openRounds as r (r.gameId)}
 			{@const q = quorum(r)}
-			<form method="POST" action="?/vote" use:enhance={voteEnhance} class="card ballot">
+			<form method="POST" action="?/vote" use:enhance={voteEnhance(r.gameId)} class="card ballot">
 				<input type="hidden" name="gameId" value={r.gameId} />
 				<div class="top">
 					<div class="meta">
@@ -86,15 +100,23 @@
 				<div class="matchup">
 					<span class="teamgrp us">
 						{#each r.us as p (p.id)}
-							<span class="pchip" class:you={p.id === data.myId}>
+							<span
+								class="pchip"
+								class:you={p.id === data.myId}
+								class:voted={didVote(r.voterIds, p.id)}
+							>
 								<span class="em">{p.emoji}</span>{p.id === data.myId ? 'You' : p.name}
+								{#if didVote(r.voterIds, p.id)}<span class="vcheck" title="Voted">✓</span>{/if}
 							</span>
 						{/each}
 					</span>
 					<span class="def">{wonRound(r) ? 'def.' : 'lost to'}</span>
 					<span class="teamgrp">
 						{#each r.them as p (p.id)}
-							<span class="pchip"><span class="em">{p.emoji}</span>{p.name}</span>
+							<span class="pchip" class:voted={didVote(r.voterIds, p.id)}>
+								<span class="em">{p.emoji}</span>{p.name}
+								{#if didVote(r.voterIds, p.id)}<span class="vcheck" title="Voted">✓</span>{/if}
+							</span>
 						{/each}
 					</span>
 				</div>
@@ -149,8 +171,14 @@
 				{#if form?.error}<p class="err">{form.error}</p>{/if}
 
 				<div class="footer">
-					<span class="quorum">{q.needed} of {q.total} votes needed to count</span>
-					<button class="btn" type="submit" disabled={!picked[r.gameId]}>Cast final vote</button>
+					<span class="turnout">
+						<span class="kc">✓</span>
+						<b>{r.voterIds.length}</b> of {q.total} voted
+						<span class="need">({q.needed} needed to count)</span>
+					</span>
+					<button class="btn" type="submit" disabled={!picked[r.gameId] || submitting[r.gameId]}>
+						{#if submitting[r.gameId]}<span class="spin"></span>Casting…{:else}Cast final vote{/if}
+					</button>
 				</div>
 			</form>
 		{/each}
@@ -164,6 +192,7 @@
 	</div>
 	<div class="stack">
 		{#each data.votedRounds as r (r.gameId)}
+			{@const q = quorum(r)}
 			<div class="card voted-card">
 				<div class="top">
 					<div class="meta">
@@ -187,15 +216,23 @@
 				<div class="matchup">
 					<span class="teamgrp us">
 						{#each r.us as p (p.id)}
-							<span class="pchip" class:you={p.id === data.myId}>
+							<span
+								class="pchip"
+								class:you={p.id === data.myId}
+								class:voted={didVote(r.voterIds, p.id)}
+							>
 								<span class="em">{p.emoji}</span>{p.id === data.myId ? 'You' : p.name}
+								{#if didVote(r.voterIds, p.id)}<span class="vcheck" title="Voted">✓</span>{/if}
 							</span>
 						{/each}
 					</span>
 					<span class="def">{wonRound(r) ? 'def.' : 'lost to'}</span>
 					<span class="teamgrp">
 						{#each r.them as p (p.id)}
-							<span class="pchip"><span class="em">{p.emoji}</span>{p.name}</span>
+							<span class="pchip" class:voted={didVote(r.voterIds, p.id)}>
+								<span class="em">{p.emoji}</span>{p.name}
+								{#if didVote(r.voterIds, p.id)}<span class="vcheck" title="Voted">✓</span>{/if}
+							</span>
 						{/each}
 					</span>
 				</div>
@@ -206,6 +243,11 @@
 							<span class="av">{r.myVote.emoji}</span>You voted for {r.myVote.name}
 						</span>
 					{/if}
+					<span class="turnout">
+						<span class="kc">✓</span>
+						<b>{r.voterIds.length}</b> of {q.total} voted
+						<span class="need">({q.needed} needed to count)</span>
+					</span>
 					<span class="hidden-note">
 						<svg
 							width="15"
@@ -510,10 +552,72 @@
 		gap: 0.6rem;
 		margin-top: 0.75rem;
 	}
-	.quorum {
+	/* Live turnout: how many of the game's participants have voted so far, plus
+	   the quorum needed to count. Turnout only — never reveals who leads. */
+	.turnout {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.35rem;
 		font-size: 0.75rem;
 		color: var(--muted);
 		font-weight: 700;
+	}
+	.turnout .kc {
+		display: inline-grid;
+		place-items: center;
+		width: 14px;
+		height: 14px;
+		border-radius: 50%;
+		background: var(--up);
+		color: #fff;
+		font-size: 9px;
+		font-weight: 900;
+	}
+	.turnout b {
+		color: var(--ink);
+		font-variant-numeric: tabular-nums;
+	}
+	.turnout .need {
+		color: var(--muted);
+		font-weight: 700;
+	}
+	/* ✓ badge on the chip of a player who has already voted. */
+	.pchip.voted {
+		border: 1.5px solid var(--up);
+		padding-right: 0.32rem;
+	}
+	.vcheck {
+		display: inline-grid;
+		place-items: center;
+		width: 15px;
+		height: 15px;
+		border-radius: 50%;
+		background: var(--up);
+		color: #fff;
+		font-size: 10px;
+		font-weight: 900;
+		line-height: 1;
+		margin-left: 0.05rem;
+	}
+	/* In-flight vote: the button becomes a spinner + "Casting…" and disables. */
+	.btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.5rem;
+	}
+	.spin {
+		width: 15px;
+		height: 15px;
+		border-radius: 50%;
+		border: 2.5px solid rgba(255, 255, 255, 0.4);
+		border-top-color: #fff;
+		animation: spin 0.7s linear infinite;
+	}
+	@keyframes spin {
+		to {
+			transform: rotate(360deg);
+		}
 	}
 	.err {
 		color: var(--danger);

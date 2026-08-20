@@ -85,6 +85,17 @@ describe('mvp read queries', () => {
 		await castVote(db, { gameId, voterId: a.id, nomineeId: b.id });
 		expect(await getOpenRoundsForPlayer(db, a.id)).toHaveLength(0); // already voted
 	});
+	it('reports who has already voted (voterIds) on a still-pending round', async () => {
+		const { gameId, a, b, c } = await setup2v2();
+		await createMvpRound(db, { gameId, deadline: '2026-08-19T10:00:00.000Z' });
+		// Nobody has voted yet -> empty turnout.
+		expect((await getOpenRoundsForPlayer(db, a.id))[0].voterIds).toEqual([]);
+		// b votes; a still hasn't, so a keeps seeing the round with b in voterIds.
+		await castVote(db, { gameId, voterId: b.id, nomineeId: c.id });
+		const openForA = await getOpenRoundsForPlayer(db, a.id);
+		expect(openForA).toHaveLength(1);
+		expect(openForA[0].voterIds).toEqual([b.id]);
+	});
 	it('reports decided results with winners and top vote count, and MVP counts', async () => {
 		const { gameId, a, c, d } = await setup2v2();
 		await createMvpRound(db, { gameId, deadline: '2026-08-19T10:00:00.000Z' });
@@ -175,6 +186,23 @@ describe('getMyOpenVotes', () => {
 
 		// b hasn't voted, so nothing shows in their voted list.
 		expect(await getMyOpenVotes(db, b.id)).toHaveLength(0);
+	});
+	it('includes the full turnout (voterIds) on a voted round', async () => {
+		const [a, b, c, d] = await Promise.all(['A', 'B', 'C', 'D'].map((n) => addPlayer(db, n)));
+		const gameId = await insertGame(db, {
+			playedAt: '2026-08-18T10:00:00.000Z',
+			format: '2v2',
+			winnerSide: 'A',
+			sideA: [a.id, b.id],
+			sideB: [c.id, d.id]
+		});
+		await createMvpRound(db, { gameId, deadline: '2026-08-19T10:00:00.000Z' });
+		await castVote(db, { gameId, voterId: a.id, nomineeId: c.id });
+		await castVote(db, { gameId, voterId: b.id, nomineeId: c.id });
+		// a's own voted card should report both a and b as having voted.
+		const voted = await getMyOpenVotes(db, a.id);
+		expect(voted).toHaveLength(1);
+		expect(voted[0].voterIds.sort()).toEqual([a.id, b.id].sort());
 	});
 });
 
