@@ -11,7 +11,15 @@
 	let toast = $state<string | null>(null);
 
 	const fmtDate = (iso: string) =>
-		new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+		new Date(iso).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' });
+	const fmtDateTime = (iso: string) =>
+		new Date(iso).toLocaleString('nl-NL', {
+			day: 'numeric',
+			month: 'short',
+			year: 'numeric',
+			hour: '2-digit',
+			minute: '2-digit'
+		});
 
 	const presets = [
 		{ v: 'all', l: 'All' },
@@ -87,7 +95,12 @@
 			<div class="card row">
 				<div class="mid">
 					<div class="line1">
-						<span class="fmt">{g.format}</span><span class="date">{fmtDate(g.playedAt)}</span>
+						<span class="fmt">{g.format}</span><span class="date">
+							{data.isAdmin ? fmtDateTime(g.playedAt) : fmtDate(g.playedAt)}
+						</span>
+						{#if data.isAdmin}
+							<span class="audit">Entered by {g.enteredBy ?? 'unknown'}</span>
+						{/if}
 					</div>
 					<div class="teams">
 						<span class="side" class:win={g.winnerSide === 'A'}>
@@ -97,9 +110,11 @@
 						</span>
 						<span class="vs">vs</span>
 						<span class="side" class:win={g.winnerSide === 'B'}>
-							{#each g.sideB as p (p.name)}<span class="pl"
-									><span class="em">{p.emoji}</span>{p.name}</span
-								>{/each}
+							{#each g.sideB as p (p.name)}
+								<span class="pl">
+									<span class="em">{p.emoji}</span>{p.name}
+								</span>
+							{/each}
 						</span>
 					</div>
 				</div>
@@ -180,6 +195,7 @@
 		display: flex;
 		align-items: center;
 		gap: 0.4rem;
+		flex-wrap: wrap;
 	}
 	.fmt {
 		font-size: 0.62rem;
@@ -228,6 +244,11 @@
 		font-family: var(--display);
 		font-size: 0.7rem;
 		font-weight: 800;
+		color: var(--muted);
+	}
+	.audit {
+		font-size: 0.68rem;
+		font-weight: 700;
 		color: var(--muted);
 	}
 	.actions form {

@@ -16,6 +16,12 @@ export const load: PageServerLoad = async ({ locals }) => {
 export const actions: Actions = {
 	default: async ({ request, locals }) => {
 		requireAuth(locals.auth);
+		// Every newly logged game must record who entered it. requireAuth already
+		// redirects when there is no resolved player, so this is really a
+		// type-narrowing guard — the DB column stays nullable (for pre-existing
+		// games) but the app never writes a null creator for a new game.
+		const createdBy = locals.auth.player?.id;
+		if (createdBy == null) return fail(401, { error: 'Not signed in' });
 		const form = await request.formData();
 		const format = String(form.get('format')) as Format;
 		const winnerSide = String(form.get('winnerSide')) as Side;
@@ -46,7 +52,8 @@ export const actions: Actions = {
 			format,
 			winnerSide,
 			sideA,
-			sideB
+			sideB,
+			createdBy
 		});
 		try {
 			await onGameLogged(db, gameId, format, playedAt);

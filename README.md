@@ -3,50 +3,50 @@
 A leaderboard + rating system for our daily **Mindbug** games — built to settle,
 once and for all, who among us is *the Ultimate Mindbug*.
 
-We mostly play **multiplayer** (2v2 or 3v3), not standard 1v1, so the rating math
-has to be team-aware. That's the interesting part.
+We mostly play **team games** (2v2 or 3v3, side A vs side B), with **1v1** also
+supported, so the rating math is team-aware. That's the interesting part. It's a
+live web app (SvelteKit) deployed on Vercel, installable as a PWA.
 
 ## What it tracks
 
-- **Rating (Elo-style)** — a skill number per player that goes up when you win and
-  down when you lose, weighted by how strong the opposing side was.
-- **Win rate** — wins / games played.
-- **All-time wins** — total career wins.
-- **Games played**, current streak, and more as we go.
+- **Rating (team-aware Elo)** — a skill number per player that goes up when you win
+  and down when you lose, weighted by how strong the opposing side was. Kept in
+  parallel for three tracks: **total**, **2v2**, and **3v3**.
+- **Win rate**, **all-time wins**, **games played**, and current **streak**.
+- **Teams** — every player pairing/trio's shared record, ranked by win% (teams
+  have no Elo of their own).
+- **MVP voting** — after each game, players can vote for the game's MVP; results
+  and reminders go out via web push notifications.
 
-All stats should be **filterable** — e.g. by game format (2v2 / 3v3), by date range
-(this week / this month / all time), and by player.
+The board is **filterable** by format (2v2 / 3v3), by date range (today / week /
+month / all time), and split into **Players** and **Teams** views. Your last
+filter choice sticks via a cookie.
 
-## Multiplayer Elo — the approach (draft)
+## Rating model
 
-Standard Elo is 1v1. For team games (2v2, 3v3) a common, well-proven adaptation is:
+Team-aware Elo (`src/lib/rating/engine.ts`), tuned as:
 
-1. **Each team's rating = the average rating of its members.**
-2. Compute the expected result for each team with the normal Elo formula:
-   `E_team = 1 / (1 + 10^((R_opp - R_team) / 400))`.
-3. After the game, every player on a team gets the **same team delta**
-   (`K * (actual - expected)`) applied to their individual rating.
-   - Winners: `actual = 1`. Losers: `actual = 0`.
-4. `K` (the volatility factor) is tunable — higher = ratings move faster.
+1. **Each team's rating = the average rating of its members** (`startRating: 1000`).
+2. Expected result per side via the standard logistic:
+   `E = 1 / (1 + 10^((R_opp - R_team) / 400))`.
+3. After the game, every player on a side gets the **same zero-sum delta**
+   `K * (actual - expected)` applied to their individual rating
+   (`K = 24`; winners `actual = 1`, losers `actual = 0`).
 
-This keeps it simple and fair: beating a stronger team earns more; a strong player
-carried by a weak team still only gains the team delta. We can refine later
-(e.g. margin of victory, per-player contribution, 3-way free-for-alls).
+Beating a stronger side earns more; a strong player carried by a weak side still
+only gains the team delta.
 
-Open questions to decide together:
-- Starting rating (e.g. 1000 or 1500) and `K` value.
-- How to handle games with more than two teams.
-- Whether teams are fixed or shuffle every game (affects filtering).
+## Pages
 
-## Status
-
-🚧 Early days. This README is the plan. Next: decide the data model (how we log a
-game) and pick how we want to use it — a simple local web page, a spreadsheet-backed
-tool, or a small app.
-
-## The players
-
-_TBD — add the crew here._
+- `/` — the board (Players / Teams views, with format + date filters).
+- `/players`, `/players/[id]` — roster and per-player detail; admins manage
+  players and emails here.
+- `/teams/[id]` — per-team detail (team key = sorted player ids, e.g. `1-4`).
+- `/log` — log a new game (sign-in required; the logging player is recorded).
+- `/games` — full game history, newest first; admins can see who entered each
+  game and when, and delete mistaken games.
+- `/mvp` — open MVP votes and recent MVP results.
+- `/account`, `/login` — your account and Google sign-in.
 
 ## Running & deploying
 

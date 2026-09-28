@@ -27,7 +27,11 @@ export const games = pgTable('games', {
 	playedAt: timestamp('played_at', { withTimezone: true }).notNull(),
 	format: formatEnum('format').notNull(),
 	winnerSide: sideEnum('winner_side').notNull(),
-	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
+	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+	// Which player entered this game, for admin audit. Nullable: games logged
+	// before this column existed stay null ("unknown"), and set-null on player
+	// removal so a player can be deleted without orphaning game history.
+	createdBy: integer('created_by').references(() => players.id, { onDelete: 'set null' })
 });
 
 export const gameParticipants = pgTable('game_participants', {

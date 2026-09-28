@@ -7,6 +7,7 @@ import {
 	setPlayerActive,
 	insertGame,
 	getAllGames,
+	getGamesMeta,
 	deleteGame,
 	getPlayerByEmail,
 	getPlayersForAdmin,
@@ -68,6 +69,46 @@ describe('games', () => {
 			sideA: [a.id, b.id].sort((x, y) => x - y),
 			sideB: [c.id, d.id].sort((x, y) => x - y)
 		});
+	});
+
+	it('records createdBy when supplied and reads it via getGamesMeta', async () => {
+		const [a, b, c, d, entrant] = await Promise.all([
+			addPlayer(db, 'A'),
+			addPlayer(db, 'B'),
+			addPlayer(db, 'C'),
+			addPlayer(db, 'D'),
+			addPlayer(db, 'Entrant')
+		]);
+		const id = await insertGame(db, {
+			playedAt: '2026-01-01T10:00:00.000Z',
+			format: '2v2',
+			winnerSide: 'A',
+			sideA: [a.id, b.id],
+			sideB: [c.id, d.id],
+			createdBy: entrant.id
+		});
+		const meta = await getGamesMeta(db);
+		expect(meta).toHaveLength(1);
+		expect(meta[0]).toMatchObject({ id, createdBy: entrant.id });
+		expect(typeof meta[0].createdAt).toBe('string');
+	});
+
+	it('leaves createdBy null when omitted', async () => {
+		const [a, b, c, d] = await Promise.all([
+			addPlayer(db, 'A'),
+			addPlayer(db, 'B'),
+			addPlayer(db, 'C'),
+			addPlayer(db, 'D')
+		]);
+		await insertGame(db, {
+			playedAt: '2026-01-01T10:00:00.000Z',
+			format: '2v2',
+			winnerSide: 'A',
+			sideA: [a.id, b.id],
+			sideB: [c.id, d.id]
+		});
+		const meta = await getGamesMeta(db);
+		expect(meta[0].createdBy).toBeNull();
 	});
 });
 

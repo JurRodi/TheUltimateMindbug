@@ -1,7 +1,7 @@
 import { fail } from '@sveltejs/kit';
 import { requireAdmin } from '$lib/server/authz';
 import { db } from '$lib/server/db';
-import { getAllGames, getPlayers, deleteGame } from '$lib/server/db/queries';
+import { getAllGames, getPlayers, deleteGame, getGamesMeta } from '$lib/server/db/queries';
 import { creatureFor } from '$lib/creatures';
 import { paginateByDate } from '$lib/stats/paginate';
 import type { Actions, PageServerLoad } from './$types';
@@ -11,23 +11,38 @@ const PAGE_SIZE = 12;
 export const load: PageServerLoad = async ({ locals, url }) => {
 	// Public page: anyone can browse the game history. The delete action below
 	// stays admin-only, and the delete UI is hidden for non-admins client-side.
-	const [players, games] = await Promise.all([getPlayers(db), getAllGames(db)]);
+	const isAdmin = locals.auth.isAdmin;
+	// Audit metadata (entry time + who entered) is admin-only; skip the query
+	// entirely for public viewers so it is never fetched or serialized.
+	const [players, games, meta] = await Promise.all([
+		getPlayers(db),
+		getAllGames(db),
+		isAdmin ? getGamesMeta(db) : Promise.resolve([])
+	]);
 	const nameById = new Map(players.map((p) => [p.id, p.name]));
 	const avatarById = new Map(players.map((p) => [p.id, p.avatar]));
+	const metaById = new Map(meta.map((m) => [m.id, m]));
 	const resolve = (id: number) => ({
 		name: nameById.get(id) ?? `#${id}`,
 		emoji: creatureFor(id, avatarById.get(id))
 	});
 	const rows = [...games]
 		.sort((a, b) => (a.playedAt === b.playedAt ? b.id - a.id : a.playedAt < b.playedAt ? 1 : -1))
-		.map((g) => ({
-			id: g.id,
-			playedAt: g.playedAt,
-			format: g.format,
-			winnerSide: g.winnerSide,
-			sideA: g.sideA.map(resolve),
-			sideB: g.sideB.map(resolve)
-		}));
+		.map((g) => {
+			const m = isAdmin ? metaById.get(g.id) : undefined;
+			return {
+				id: g.id,
+				playedAt: g.playedAt,
+				format: g.format,
+				winnerSide: g.winnerSide,
+				sideA: g.sideA.map(resolve),
+				sideB: g.sideB.map(resolve),
+				// Admin-only: entry timestamp + resolved creator name (null = unknown).
+				createdAt: m?.createdAt ?? null,
+				enteredBy:
+					m && m.createdBy != null ? (nameById.get(m.createdBy) ?? `#${m.createdBy}`) : null
+			};
+		});
 
 	// Date window: a custom from/to wins over a preset range (rolling windows).
 	const fromParam = url.searchParams.get('from');
@@ -64,7 +79,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		range,
 		from: fromParam ?? '',
 		to: toParam ?? '',
-		isAdmin: locals.auth.isAdmin
+		isAdmin
 	};
 };
 

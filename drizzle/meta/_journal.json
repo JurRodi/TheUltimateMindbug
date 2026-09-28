@@ -29,6 +29,13 @@
       "when": 1787060826999,
       "tag": "0003_thin_northstar",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790595503858,
+      "tag": "0004_yummy_rage",
+      "breakpoints": true
     }
   ]
 }

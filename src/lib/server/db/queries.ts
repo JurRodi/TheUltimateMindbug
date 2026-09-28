@@ -103,7 +103,14 @@ export async function updatePlayerAuth(
 
 export async function insertGame(
 	db: DB,
-	input: { playedAt: string; format: Format; winnerSide: Side; sideA: number[]; sideB: number[] }
+	input: {
+		playedAt: string;
+		format: Format;
+		winnerSide: Side;
+		sideA: number[];
+		sideB: number[];
+		createdBy?: number | null;
+	}
 ): Promise<number> {
 	// A single atomic CTE rather than db.transaction(): the production driver
 	// (drizzle-orm/neon-http) has NO interactive transaction support and throws
@@ -122,8 +129,8 @@ export async function insertGame(
 	);
 	const res = await db.execute(sql`
 		WITH new_game AS (
-			INSERT INTO games (played_at, format, winner_side)
-			VALUES (${new Date(input.playedAt)}, ${input.format}, ${input.winnerSide})
+			INSERT INTO games (played_at, format, winner_side, created_by)
+			VALUES (${new Date(input.playedAt)}, ${input.format}, ${input.winnerSide}, ${input.createdBy ?? null})
 			RETURNING id
 		), ins AS (
 			INSERT INTO game_participants (game_id, player_id, side)
@@ -153,6 +160,23 @@ export async function getAllGames(db: DB): Promise<GameInput[]> {
 		})
 		.from(gameParticipants)) as ParticipantRow[];
 	return toGameInputs(gameRows, participantRows);
+}
+
+/** Admin-only audit metadata per game: when it was entered and by whom. Kept
+    separate from GameInput (the pure engine shape) so rating/stats code stays
+    free of admin concerns. `createdBy` is null for games logged before the
+    column existed. */
+export type GameMeta = { id: number; createdAt: string; createdBy: number | null };
+
+export async function getGamesMeta(db: DB): Promise<GameMeta[]> {
+	const rows = await db
+		.select({ id: games.id, createdAt: games.createdAt, createdBy: games.createdBy })
+		.from(games);
+	return rows.map((r) => ({
+		id: r.id,
+		createdAt: r.createdAt.toISOString(),
+		createdBy: r.createdBy
+	}));
 }
 
 export type RoundWithVotes = {
