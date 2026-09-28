@@ -1,6 +1,7 @@
 import { json, error } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import { savePushSubscription } from '$lib/server/db/queries';
+import { isAllowedPushEndpoint } from '$lib/validation';
 import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
@@ -12,6 +13,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	} | null;
 	if (!sub?.endpoint || !sub.keys?.p256dh || !sub.keys?.auth)
 		throw error(400, 'Invalid subscription');
+	// The endpoint gets server-side POSTs later; only accept real push gateways.
+	if (!isAllowedPushEndpoint(sub.endpoint)) throw error(400, 'Invalid subscription');
 	await savePushSubscription(db, {
 		playerId: player.id,
 		endpoint: sub.endpoint,

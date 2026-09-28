@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeName, isValidEmail, parseTimestamp, MAX_NAME_LEN } from './validation';
+import {
+	normalizeName,
+	isValidEmail,
+	parseTimestamp,
+	isAllowedPushEndpoint,
+	MAX_NAME_LEN
+} from './validation';
 
 describe('normalizeName', () => {
 	it('trims and accepts a normal name', () => {
@@ -25,6 +31,30 @@ describe('isValidEmail', () => {
 		expect(isValidEmail('a@b')).toBe(false);
 		expect(isValidEmail('a b@c.com')).toBe(false);
 		expect(isValidEmail('')).toBe(false);
+	});
+});
+
+describe('isAllowedPushEndpoint', () => {
+	it('accepts real push gateways over https', () => {
+		expect(isAllowedPushEndpoint('https://fcm.googleapis.com/fcm/send/abc')).toBe(true);
+		expect(isAllowedPushEndpoint('https://updates.push.services.mozilla.com/wpush/v2/xyz')).toBe(
+			true
+		);
+		expect(isAllowedPushEndpoint('https://db5p.notify.windows.com/w/?token=q')).toBe(true);
+		expect(isAllowedPushEndpoint('https://web.push.apple.com/xyz')).toBe(true);
+	});
+	it('rejects non-push hosts (SSRF guard)', () => {
+		expect(isAllowedPushEndpoint('https://evil.example.com/steal')).toBe(false);
+		expect(isAllowedPushEndpoint('http://169.254.169.254/latest/meta-data')).toBe(false);
+		expect(isAllowedPushEndpoint('https://notgoogleapis.com/x')).toBe(false);
+	});
+	it('rejects non-https and garbage', () => {
+		expect(isAllowedPushEndpoint('http://fcm.googleapis.com/fcm/send/abc')).toBe(false);
+		expect(isAllowedPushEndpoint('not a url')).toBe(false);
+		expect(isAllowedPushEndpoint('')).toBe(false);
+	});
+	it('is not fooled by a lookalike subdomain', () => {
+		expect(isAllowedPushEndpoint('https://fcm.googleapis.com.evil.com/x')).toBe(false);
 	});
 });
 

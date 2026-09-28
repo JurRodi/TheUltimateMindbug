@@ -20,6 +20,30 @@ export function isValidEmail(email: string): boolean {
 	return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
+/** Hostname suffixes of the real Web Push services. A subscription `endpoint`
+    is later POSTed to by the server (web-push), so accepting an arbitrary URL
+    would let an authenticated user aim those requests at any host (SSRF). We
+    restrict endpoints to the known browser push gateways. */
+const PUSH_HOST_SUFFIXES = [
+	'.googleapis.com', // Chrome / Chromium (fcm.googleapis.com)
+	'.push.services.mozilla.com', // Firefox
+	'.notify.windows.com', // Edge / Windows (WNS)
+	'.push.apple.com' // Safari / Apple
+];
+
+/** True when `endpoint` is an https URL served by a recognised push gateway. */
+export function isAllowedPushEndpoint(endpoint: string): boolean {
+	let url: URL;
+	try {
+		url = new URL(endpoint);
+	} catch {
+		return false;
+	}
+	if (url.protocol !== 'https:') return false;
+	const host = url.hostname.toLowerCase();
+	return PUSH_HOST_SUFFIXES.some((s) => host === s.slice(1) || host.endsWith(s));
+}
+
 /** Parse a client-supplied timestamp into an ISO string, or null when it is not
     a real date (guards against `new Date('garbage').toISOString()` throwing). */
 export function parseTimestamp(input: string): string | null {
