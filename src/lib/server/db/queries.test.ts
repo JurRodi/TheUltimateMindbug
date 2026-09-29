@@ -7,6 +7,7 @@ import {
 	setPlayerActive,
 	insertGame,
 	getAllGames,
+	getGameHistory,
 	getGamesMeta,
 	deleteGame,
 	getPlayerByEmail,
@@ -14,6 +15,7 @@ import {
 	updatePlayerAuth,
 	updatePlayerProfile
 } from './queries';
+import { games as gamesTable, tournaments } from './schema';
 
 let db: Awaited<ReturnType<typeof makeTestDb>>;
 
@@ -179,5 +181,82 @@ describe('deleteGame', () => {
 		expect((await getAllGames(db)).map((game) => game.id)).toContain(gid);
 		await deleteGame(db, gid);
 		expect((await getAllGames(db)).map((game) => game.id)).not.toContain(gid);
+	});
+});
+
+describe('ranked and scheduled games', () => {
+	async function four() {
+		return Promise.all(['A', 'B', 'C', 'D'].map((n) => addPlayer(db, n)));
+	}
+
+	it('getAllGames excludes unranked games; getGameHistory keeps them', async () => {
+		const [a, b, c, d] = await four();
+		await insertGame(db, {
+			playedAt: '2026-01-01T10:00:00.000Z',
+			format: '2v2',
+			winnerSide: 'A',
+			sideA: [a.id, b.id],
+			sideB: [c.id, d.id]
+		});
+		const casual = await insertGame(db, {
+			playedAt: '2026-01-02T10:00:00.000Z',
+			format: '2v2',
+			winnerSide: 'B',
+			sideA: [a.id, b.id],
+			sideB: [c.id, d.id],
+			ranked: false
+		});
+		expect((await getAllGames(db)).map((g) => g.id)).not.toContain(casual);
+		const history = await getGameHistory(db);
+		expect(history).toHaveLength(2);
+		expect(history.find((g) => g.id === casual)).toMatchObject({
+			ranked: false,
+			tournament: null
+		});
+	});
+
+	it('getAllGames and getGameHistory exclude scheduled tournament games', async () => {
+		const [a] = await four();
+		const [t] = await db
+			.insert(tournaments)
+			.values({
+				name: 'Cup',
+				style: 'knockout',
+				format: '2v2',
+				ranked: true,
+				tables: 1,
+				seed: 1,
+				createdBy: a.id
+			})
+			.returning();
+		await db.insert(gamesTable).values({ format: '2v2', tournamentId: t.id, round: 1, slot: 0 });
+		expect(await getAllGames(db)).toEqual([]);
+		expect(await getGameHistory(db)).toEqual([]);
+	});
+
+	it('getGameHistory attaches tournament name and round', async () => {
+		const [a, b, c, d] = await four();
+		const [t] = await db
+			.insert(tournaments)
+			.values({
+				name: 'Cup',
+				style: 'knockout',
+				format: '2v2',
+				ranked: true,
+				tables: 1,
+				seed: 1,
+				createdBy: a.id
+			})
+			.returning();
+		const id = await insertGame(db, {
+			playedAt: '2026-01-01T10:00:00.000Z',
+			format: '2v2',
+			winnerSide: 'A',
+			sideA: [a.id, b.id],
+			sideB: [c.id, d.id]
+		});
+		await db.update(gamesTable).set({ tournamentId: t.id, round: 2, slot: 0 });
+		const [g] = await getGameHistory(db);
+		expect(g).toMatchObject({ id, tournament: { id: t.id, name: 'Cup', round: 2 } });
 	});
 });

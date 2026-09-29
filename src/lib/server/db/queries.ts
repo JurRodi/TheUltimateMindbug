@@ -8,7 +8,8 @@ import {
 	mvpRounds,
 	mvpVotes,
 	pushSubscriptions,
-	appSettings
+	appSettings,
+	tournaments
 } from './schema';
 import { toGameInputs, type GameRow, type ParticipantRow } from './shape';
 import { isValidAvatar, creatureFor } from '$lib/creatures';
@@ -134,6 +135,7 @@ export async function insertGame(
 		sideA: number[];
 		sideB: number[];
 		createdBy?: number | null;
+		ranked?: boolean;
 	}
 ): Promise<number> {
 	// A single atomic CTE rather than db.transaction(): the production driver
@@ -153,8 +155,8 @@ export async function insertGame(
 	);
 	const res = await db.execute(sql`
 		WITH new_game AS (
-			INSERT INTO games (played_at, format, winner_side, created_by)
-			VALUES (${new Date(input.playedAt)}, ${input.format}, ${input.winnerSide}, ${input.createdBy ?? null})
+			INSERT INTO games (played_at, format, winner_side, created_by, ranked)
+			VALUES (${new Date(input.playedAt)}, ${input.format}, ${input.winnerSide}, ${input.createdBy ?? null}, ${input.ranked ?? true})
 			RETURNING id
 		), ins AS (
 			INSERT INTO game_participants (game_id, player_id, side)
@@ -174,8 +176,19 @@ export async function deleteGame(db: DB, id: number): Promise<void> {
 	await db.delete(games).where(eq(games.id, id));
 }
 
+/** Games that feed the rating engine and stats: played (has a winner) and
+    ranked. Scheduled tournament matches and casual/unranked games never reach
+    computeRatings — a null winner would poison it. */
 export async function getAllGames(db: DB): Promise<GameInput[]> {
-	const gameRows = (await db.select().from(games)) as GameRow[];
+	const gameRows = (await db
+		.select({
+			id: games.id,
+			playedAt: games.playedAt,
+			format: games.format,
+			winnerSide: games.winnerSide
+		})
+		.from(games)
+		.where(and(isNotNull(games.winnerSide), eq(games.ranked, true)))) as GameRow[];
 	const participantRows = (await db
 		.select({
 			gameId: gameParticipants.gameId,
@@ -184,6 +197,49 @@ export async function getAllGames(db: DB): Promise<GameInput[]> {
 		})
 		.from(gameParticipants)) as ParticipantRow[];
 	return toGameInputs(gameRows, participantRows);
+}
+
+export type HistoryGame = GameInput & {
+	ranked: boolean;
+	tournament: { id: number; name: string; round: number } | null;
+};
+
+/** Every played game, ranked or not, with its tournament (if any) — for game
+    history lists. Scheduled (unplayed) tournament matches are excluded. */
+export async function getGameHistory(db: DB): Promise<HistoryGame[]> {
+	const rows = await db
+		.select({
+			id: games.id,
+			playedAt: games.playedAt,
+			format: games.format,
+			winnerSide: games.winnerSide,
+			ranked: games.ranked,
+			round: games.round,
+			tournamentId: tournaments.id,
+			tournamentName: tournaments.name
+		})
+		.from(games)
+		.leftJoin(tournaments, eq(tournaments.id, games.tournamentId))
+		.where(isNotNull(games.winnerSide));
+	const participantRows = (await db
+		.select({
+			gameId: gameParticipants.gameId,
+			playerId: gameParticipants.playerId,
+			side: gameParticipants.side
+		})
+		.from(gameParticipants)) as ParticipantRow[];
+	const extra = new Map(rows.map((r) => [r.id, r]));
+	return toGameInputs(rows as GameRow[], participantRows).map((g) => {
+		const r = extra.get(g.id)!;
+		return {
+			...g,
+			ranked: r.ranked,
+			tournament:
+				r.tournamentId != null
+					? { id: r.tournamentId, name: r.tournamentName ?? '', round: r.round ?? 0 }
+					: null
+		};
+	});
 }
 
 /** Admin-only audit metadata per game: when it was entered and by whom. Kept
@@ -425,10 +481,11 @@ export async function getOpenRoundsForPlayer(db: DB, playerId: number): Promise<
 		return {
 			gameId: r.gameId,
 			format: r.format,
-			playedAt: r.playedAt.toISOString(),
+			// MVP rounds exist only for played games, so winner/playedAt are set.
+			playedAt: r.playedAt!.toISOString(),
 			deadline: r.deadline.toISOString(),
 			side: r.side,
-			winnerSide: r.winnerSide,
+			winnerSide: r.winnerSide!,
 			us: all
 				.filter((m) => m.side === r.side)
 				.map((m) => ({ id: m.playerId, name: m.name, emoji: m.emoji })),
@@ -487,10 +544,10 @@ export async function getMyOpenVotes(db: DB, playerId: number): Promise<MyOpenVo
 		return {
 			gameId: r.gameId,
 			format: r.format,
-			playedAt: r.playedAt.toISOString(),
+			playedAt: r.playedAt!.toISOString(),
 			deadline: r.deadline.toISOString(),
 			side: r.side,
-			winnerSide: r.winnerSide,
+			winnerSide: r.winnerSide!,
 			us: all.filter((m) => m.side === r.side).map(toMember),
 			them: all.filter((m) => m.side !== r.side).map(toMember),
 			myVote: all.map(toMember).find((m) => m.id === r.nomineeId) ?? null,
@@ -544,7 +601,7 @@ export async function getRecentResults(db: DB, limit: number): Promise<MvpResult
 		return {
 			gameId: r.gameId,
 			format: r.format,
-			playedAt: r.playedAt.toISOString(),
+			playedAt: r.playedAt!.toISOString(),
 			status: r.status as 'decided' | 'void',
 			winners: mem
 				.filter((m) => ids.includes(m.playerId))

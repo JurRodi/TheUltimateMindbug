@@ -6,8 +6,10 @@ import {
 	timestamp,
 	integer,
 	pgEnum,
-	unique
+	unique,
+	check
 } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 
 export const formatEnum = pgEnum('format', ['1v1', '2v2', '3v3']);
 export const sideEnum = pgEnum('side', ['A', 'B']);
@@ -22,17 +24,67 @@ export const players = pgTable('players', {
 	isAdmin: boolean('is_admin').notNull().default(false)
 });
 
-export const games = pgTable('games', {
+export const tournamentStyleEnum = pgEnum('tournament_style', ['rotating', 'fixed', 'knockout']);
+export const tournamentStatusEnum = pgEnum('tournament_status', ['live', 'finished', 'abandoned']);
+
+export const tournaments = pgTable('tournaments', {
 	id: serial('id').primaryKey(),
-	playedAt: timestamp('played_at', { withTimezone: true }).notNull(),
+	name: text('name').notNull(),
+	style: tournamentStyleEnum('style').notNull(),
 	format: formatEnum('format').notNull(),
-	winnerSide: sideEnum('winner_side').notNull(),
+	ranked: boolean('ranked').notNull(),
+	// Rotating only: number of rounds chosen at creation.
+	rounds: integer('rounds'),
+	// Matches played at once (multiple decks).
+	tables: integer('tables').notNull().default(1),
+	// Draw seed: the create-page preview and the server generate the same draw from it.
+	seed: integer('seed').notNull(),
+	status: tournamentStatusEnum('status').notNull().default('live'),
+	createdBy: integer('created_by').references(() => players.id, { onDelete: 'set null' }),
 	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-	// Which player entered this game, for admin audit. Nullable: games logged
-	// before this column existed stay null ("unknown"), and set-null on player
-	// removal so a player can be deleted without orphaning game history.
-	createdBy: integer('created_by').references(() => players.id, { onDelete: 'set null' })
+	finishedAt: timestamp('finished_at', { withTimezone: true })
 });
+
+export const games = pgTable(
+	'games',
+	{
+		id: serial('id').primaryKey(),
+		// Null only for a scheduled (unplayed) tournament match — see checks below.
+		playedAt: timestamp('played_at', { withTimezone: true }),
+		format: formatEnum('format').notNull(),
+		winnerSide: sideEnum('winner_side'),
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+		// Which player entered this game, for admin audit. Nullable: games logged
+		// before this column existed stay null ("unknown"), and set-null on player
+		// removal so a player can be deleted without orphaning game history.
+		createdBy: integer('created_by').references(() => players.id, { onDelete: 'set null' }),
+		// Unranked games are stored and shown but never move Elo or stats.
+		ranked: boolean('ranked').notNull().default(true),
+		tournamentId: integer('tournament_id').references(() => tournaments.id, {
+			onDelete: 'cascade'
+		}),
+		// Tournament position: 1-based round; slot = table (rotating/fixed) or bracket position (knockout), 0-based.
+		round: integer('round'),
+		slot: integer('slot')
+	},
+	(t) => [
+		// Raw column names: the checks live on this table, so no qualification needed.
+		check(
+			'games_unplayed_needs_tournament',
+			sql`winner_side IS NOT NULL OR tournament_id IS NOT NULL`
+		),
+		check(
+			'games_played_at_needs_tournament',
+			sql`played_at IS NOT NULL OR tournament_id IS NOT NULL`
+		),
+		check('games_result_has_played_at', sql`(winner_side IS NULL) = (played_at IS NULL)`),
+		check(
+			'games_round_slot_need_tournament',
+			sql`(round IS NULL AND slot IS NULL) OR tournament_id IS NOT NULL`
+		),
+		unique('games_tournament_round_slot').on(t.tournamentId, t.round, t.slot)
+	]
+);
 
 export const gameParticipants = pgTable('game_participants', {
 	id: serial('id').primaryKey(),
@@ -44,6 +96,22 @@ export const gameParticipants = pgTable('game_participants', {
 		.references(() => players.id),
 	side: sideEnum('side').notNull()
 });
+
+export const tournamentPlayers = pgTable(
+	'tournament_players',
+	{
+		id: serial('id').primaryKey(),
+		tournamentId: integer('tournament_id')
+			.notNull()
+			.references(() => tournaments.id, { onDelete: 'cascade' }),
+		playerId: integer('player_id')
+			.notNull()
+			.references(() => players.id),
+		// Fixed/knockout team number (1-based); null for rotating.
+		teamNo: integer('team_no')
+	},
+	(t) => [unique('tournament_players_tournament_player').on(t.tournamentId, t.playerId)]
+);
 
 export const mvpStatusEnum = pgEnum('mvp_status', ['open', 'decided', 'void']);
 
