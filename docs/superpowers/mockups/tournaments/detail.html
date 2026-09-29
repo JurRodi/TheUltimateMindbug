@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Tournament detail</title>
+<style>
+:root{--mat:#0b4744;--mat-top:#0d534e;--card:#f3e6c6;--card-hi:#f8efd6;--edge:#c99a3f;--gold:#e0a52a;--gold-2:#f4d271;--ink:#2a2014;--muted:#7c6a48;--line:#ddc99c;--teal:#17b3a6;--coral:#ef6a4d;--pink:#d24f96;--up:#0f8f6a;--down:#d64a37;--onmat:#ecfaf7;--onmat-m:#9fd0ca;--tan:#e7d6ad}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(120% 80% at 50% 0%,var(--mat-top),var(--mat) 60%) fixed;color:var(--onmat);font-family:Nunito,system-ui,sans-serif;padding:24px}
+h1,h2,h3{font-family:Poppins,'Century Gothic',system-ui;color:var(--gold-2);margin:0}
+h2.s{font-size:1.05rem;margin:18px 0 8px}
+.intro{max-width:1200px;margin:0 auto 20px;color:var(--onmat-m)}.intro b{color:var(--onmat)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:28px;max-width:1200px;margin:0 auto;align-items:start}
+.frame{border:2px dashed rgba(255,255,255,.18);border-radius:18px;padding:16px}
+.frame>.lbl{font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--onmat-m);margin-bottom:10px}
+.card{background:var(--card);color:var(--ink);border-radius:16px;border:2px solid var(--edge);box-shadow:0 5px 0 rgba(0,0,0,.28);padding:14px;margin-bottom:12px}
+.row{display:flex;align-items:center;gap:8px}
+.btn{background:linear-gradient(160deg,#1fbf8f,#0f8f6a);color:#fff;border:0;border-radius:10px;padding:6px 10px;font-weight:800;font-family:inherit;font-size:.8rem}
+.btn.ghost{background:var(--tan);color:var(--ink)}.btn.danger{background:var(--down)}
+.chip{display:inline-block;font-size:.72rem;font-weight:800;border-radius:99px;padding:2px 8px;background:var(--tan);color:var(--ink)}
+.chip.live{background:var(--coral);color:#fff}
+.muted{color:var(--muted);font-size:.82rem}
+.back{color:var(--teal);font-weight:700;font-size:.85rem}
+.hero h1{font-size:1.4rem;color:var(--ink)}
+.bar{height:8px;border-radius:99px;background:var(--tan);overflow:hidden;margin-top:8px}.bar i{display:block;height:100%;width:58%;background:var(--teal)}
+.champ{background:linear-gradient(155deg,#edca66,#cf9a2c);border-color:#a8791f;text-align:center}
+.champ .big{font-size:2rem}.champ .n{font-family:Poppins;font-weight:800;font-size:1.2rem}
+table{width:100%;border-collapse:collapse;font-size:.86rem}
+th{font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);text-align:right;padding:4px 6px}
+th:nth-child(2){text-align:left}
+td{padding:6px;border-top:1px solid var(--line);text-align:right}
+td:nth-child(2){text-align:left;font-weight:800}
+td:first-child{text-align:center;font-weight:800;width:28px}
+.pts{font-weight:900;color:var(--up)}
+.round{margin-bottom:10px}
+.rh{display:flex;justify-content:space-between;align-items:center;font-weight:800;font-size:.85rem;margin-bottom:6px}
+.m{display:grid;grid-template-columns:1fr auto 1fr;gap:6px;align-items:center;background:var(--card-hi);border:2px solid var(--line);border-radius:12px;padding:8px;margin-bottom:6px;font-size:.84rem}
+.m .side{padding:4px 6px;border-radius:8px;font-weight:700}
+.m .side.w{background:#cfeee2;color:#0b5e45}.m .side.l{opacity:.55}
+.m .vs{color:var(--muted);font-weight:800;font-size:.7rem;text-align:center}
+.m .tbl{grid-column:1/4;font-size:.7rem;color:var(--muted);font-weight:800;text-transform:uppercase}
+.m .act{grid-column:1/4;display:flex;gap:6px;justify-content:center}
+.m.live{border-color:var(--teal);box-shadow:0 0 0 2px var(--teal) inset}
+.m .tn{display:block;font-size:.62rem;font-weight:900;text-transform:uppercase;color:var(--muted);letter-spacing:.05em}
+.out{font-size:.75rem;color:var(--muted)}
+/* bracket */
+.br{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;align-items:center}
+.col{display:flex;flex-direction:column;gap:10px;justify-content:space-around;height:100%}
+.bm{background:var(--card-hi);border:2px solid var(--line);border-radius:10px;font-size:.76rem;overflow:hidden}
+.bm div{padding:4px 6px}.bm div+div{border-top:1px solid var(--line)}
+.bm .w{background:#cfeee2;font-weight:800}.bm .tbd{color:var(--muted);font-style:italic}
+.bm .bye{color:var(--muted)}
+.colh{font-size:.68rem;text-transform:uppercase;font-weight:800;color:var(--muted);text-align:center}
+.note{max-width:1200px;margin:18px auto 0;color:var(--onmat-m);font-size:.9rem}.note li{margin:4px 0}
+</style></head><body>
+<div class="intro"><h2>Screen 2 — <code>/tournaments/[id]</code> detail</h2>
+<p>Left: <b>Rotating teams, live</b> (standings + schedule, enter results inline). Right: how the standings block changes for <b>Knockout</b> (bracket) and <b>Fixed teams</b> (team table), shown finished.</p></div>
+
+<div class="grid">
+<!-- LEFT: rotating live -->
+<div class="frame"><div class="lbl">Rotating teams · live</div>
+  <span class="back">← Tournaments</span>
+  <div class="card hero" style="margin-top:8px">
+    <div class="row" style="justify-content:space-between"><h1>Friday Shuffle</h1><span class="chip live">● LIVE</span></div>
+    <div class="row" style="flex-wrap:wrap;margin-top:6px"><span class="chip">🔀 Rotating</span><span class="chip">2v2</span><span class="chip">8 players</span><span class="chip">2 tables</span><span class="chip">Ranked</span></div>
+    <div class="muted" style="margin-top:6px">Started 29 Sep 2026, 19:40 · by 🦊 Ann</div>
+    <div class="bar"><i></i></div><div class="muted" style="margin-top:4px">7 of 12 games played · round 4 of 6</div>
+  </div>
+
+  <h2 class="s">Standings</h2>
+  <div class="card" style="padding:8px 10px">
+    <table>
+      <tr><th>#</th><th>Player</th><th>P</th><th>W</th><th>L</th><th>Pts</th></tr>
+      <tr><td>🥇</td><td>🐙 Bob</td><td>4</td><td>3</td><td>1</td><td class="pts">3</td></tr>
+      <tr><td>🥈</td><td>🦊 Ann</td><td>4</td><td>3</td><td>1</td><td class="pts">3</td></tr>
+      <tr><td>3</td><td>🦉 Cas</td><td>3</td><td>2</td><td>1</td><td class="pts">2</td></tr>
+      <tr><td>4</td><td>🐸 Dee</td><td>3</td><td>1</td><td>2</td><td class="pts">1</td></tr>
+      <tr><td>…</td><td class="muted" style="font-weight:600">4 more</td><td></td><td></td><td></td><td></td></tr>
+    </table>
+    <div class="muted" style="margin-top:6px">Tiebreak: win% → head-to-head</div>
+  </div>
+
+  <h2 class="s">Schedule</h2>
+  <div class="card">
+    <div class="round">
+      <div class="rh"><span>Round 3</span><span class="muted">done</span></div>
+      <div class="m"><span class="tbl">Table 1</span><span class="side w">🦊 Ann + 🦉 Cas</span><span class="vs">VS</span><span class="side l">🐙 Bob + 🐸 Dee</span></div>
+      <div class="m"><span class="tbl">Table 2</span><span class="side l">🐝 Eli + 🐢 Gus</span><span class="vs">VS</span><span class="side w">🦄 Fay + 🦀 Hal</span></div>
+    </div>
+    <div class="round">
+      <div class="rh"><span>Round 4</span><span class="chip" style="background:var(--teal);color:#fff">now</span></div>
+      <div class="m"><span class="tbl">Table 1</span><span class="side w">🐙 Bob + 🐝 Eli</span><span class="vs">VS</span><span class="side l">🦊 Ann + 🦄 Fay</span></div>
+      <div class="m live"><span class="tbl">Table 2</span><span class="side"><span class="tn">Team 1</span>🦉 Cas + 🦀 Hal</span><span class="vs">VS</span><span class="side"><span class="tn">Team 2</span>🐸 Dee + 🐢 Gus</span>
+        <div class="act"><button class="btn">Team 1 won</button><button class="btn">Team 2 won</button></div></div>
+    </div>
+    <div class="round">
+      <div class="rh"><span>Round 5</span><span class="muted">upcoming</span></div>
+      <div class="m"><span class="tbl">Table 1</span><span class="side">🦊 Ann + 🐸 Dee</span><span class="vs">VS</span><span class="side">🐙 Bob + 🦀 Hal</span></div>
+      <div class="m"><span class="tbl">Table 2</span><span class="side">🦉 Cas + 🦄 Fay</span><span class="vs">VS</span><span class="side">🐝 Eli + 🐢 Gus</span></div>
+    </div>
+    <div class="muted">Round 6 …</div>
+  </div>
+  <div class="row" style="justify-content:flex-end"><button class="btn ghost">↩ Undo last result</button><button class="btn danger">Abandon</button></div>
+</div>
+
+<!-- RIGHT: variants -->
+<div>
+<div class="frame" style="margin-bottom:24px"><div class="lbl">Knockout · finished</div>
+  <div class="card champ">
+    <div class="big">🏆</div><div class="n">🦊 Ann + 🐙 Bob</div><div style="font-weight:700">Champions · September Cup</div>
+  </div>
+  <h2 class="s">Bracket</h2>
+  <div class="card">
+    <div class="br">
+      <div class="colh">Quarter-finals</div><div class="colh">Semi-finals</div><div class="colh">Final</div>
+      <div class="col">
+        <div class="bm"><div class="w">🦊 Ann + 🐙 Bob</div><div>🐢 Gus + 🦀 Hal</div></div>
+        <div class="bm"><div>🦉 Cas + 🐸 Dee</div><div class="w">🐝 Eli + 🦄 Fay</div></div>
+        <div class="bm"><div class="w">🐧 Ivo + 🐺 Jan</div><div class="bye">— bye —</div></div>
+        <div class="bm"><div class="w">🦁 Kim + 🐯 Lou</div><div>🐻 Max + 🐼 Nel</div></div>
+      </div>
+      <div class="col">
+        <div class="bm"><div class="w">🦊 Ann + 🐙 Bob</div><div>🐝 Eli + 🦄 Fay</div></div>
+        <div class="bm"><div>🐧 Ivo + 🐺 Jan</div><div class="w">🦁 Kim + 🐯 Lou</div></div>
+      </div>
+      <div class="col">
+        <div class="bm"><div class="w">🦊 Ann + 🐙 Bob</div><div>🦁 Kim + 🐯 Lou</div></div>
+      </div>
+    </div>
+    <div class="muted" style="margin-top:8px">While live, later rounds show <i>“Winner QF1 vs Winner QF2”</i> until decided. Placement: 1st, 2nd, 3–4th (semis), 5–8th (QF).</div>
+  </div>
+</div>
+
+<div class="frame"><div class="lbl">Fixed teams round-robin · finished</div>
+  <div class="card champ"><div class="big">🏆</div><div class="n">🦉 Cas + 🐸 Dee + 🐝 Eli</div><div style="font-weight:700">Champions · Lunch League</div></div>
+  <h2 class="s">Team standings</h2>
+  <div class="card" style="padding:8px 10px">
+    <table>
+      <tr><th>#</th><th>Team</th><th>P</th><th>W</th><th>L</th><th>Win%</th></tr>
+      <tr><td>🥇</td><td>🦉 Cas + 🐸 Dee + 🐝 Eli</td><td>2</td><td>2</td><td>0</td><td class="pts">100%</td></tr>
+      <tr><td>🥈</td><td>🦊 Ann + 🐙 Bob + 🦄 Fay</td><td>2</td><td>1</td><td>1</td><td>50%</td></tr>
+      <tr><td>🥉</td><td>🐢 Gus + 🦀 Hal + 🐧 Ivo</td><td>2</td><td>0</td><td>2</td><td>0%</td></tr>
+    </table>
+  </div>
+  <div class="muted" style="color:var(--onmat-m)">Schedule section below (same match cards as left).</div>
+</div>
+</div>
+</div>
+
+<div class="note"><b>Open questions:</b><ul>
+<li>Result entry inline on the match card ("Team 1 won / Team 2 won") — OK, or tap card → confirm dialog?</li>
+<li>Rotating: should a round's tables be playable in any order (enter Table 2 before Table 1)? I'd say yes — any match in the schedule can be entered anytime.</li>
+<li>"Undo last result" + "Abandon" (admins or creator) — enough control? Editing the draw after start = no (keep it simple).</li>
+<li>MVP voting for tournament games: skip (avoid push spam), or one MVP vote for the whole tournament at the end?</li>
+</ul></div>
+</body></html>

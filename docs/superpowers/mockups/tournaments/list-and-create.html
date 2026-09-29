@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Tournaments – list + create</title>
+<style>
+:root{--mat:#0b4744;--mat-top:#0d534e;--card:#f3e6c6;--card-hi:#f8efd6;--edge:#c99a3f;--gold:#e0a52a;--gold-2:#f4d271;--ink:#2a2014;--muted:#7c6a48;--line:#ddc99c;--teal:#17b3a6;--coral:#ef6a4d;--pink:#d24f96;--up:#0f8f6a;--down:#d64a37;--onmat:#ecfaf7;--onmat-m:#9fd0ca;--tan:#e7d6ad}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(120% 80% at 50% 0%,var(--mat-top),var(--mat) 60%) fixed;color:var(--onmat);font-family:Nunito,system-ui,sans-serif;padding:24px}
+h1,h2,h3{font-family:Poppins,'Century Gothic',system-ui;color:var(--gold-2);margin:0}
+.intro{max-width:1100px;margin:0 auto 20px;color:var(--onmat-m)}
+.intro b{color:var(--onmat)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:28px;max-width:1100px;margin:0 auto}
+.frame{border:2px dashed rgba(255,255,255,.18);border-radius:18px;padding:16px}
+.frame>.lbl{font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--onmat-m);margin-bottom:10px}
+.card{background:var(--card);color:var(--ink);border-radius:16px;border:2px solid var(--edge);box-shadow:0 5px 0 rgba(0,0,0,.28);padding:14px;margin-bottom:12px}
+.row{display:flex;align-items:center;gap:10px}
+.btn{background:linear-gradient(160deg,#1fbf8f,#0f8f6a);color:#fff;border:0;border-radius:11px;padding:9px 14px;font-weight:800;font-family:inherit}
+.btn.ghost{background:var(--tan);color:var(--ink)}
+.btn.gold{background:linear-gradient(160deg,#ecc25a,#dfa528);color:var(--ink)}
+.chip{display:inline-block;font-size:.72rem;font-weight:800;border-radius:99px;padding:2px 8px;background:var(--tan);color:var(--ink)}
+.chip.live{background:var(--coral);color:#fff}.chip.unr{background:#cbb98f;color:#4a3d24}
+.muted{color:var(--muted);font-size:.82rem}
+.tour{display:grid;grid-template-columns:44px 1fr auto;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.tour:first-of-type{border-top:0}
+.trophy{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-size:1.4rem;background:linear-gradient(155deg,#edca66,#cf9a2c);border:2px solid var(--edge)}
+.tname{font-weight:800}.win{font-weight:800}
+.sec{font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:14px 0 6px}
+.styles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.style{border:2px solid var(--line);border-radius:12px;padding:8px;background:var(--card-hi);font-size:.8rem}
+.style b{display:block;font-size:.85rem}.style.sel{border-color:var(--teal);box-shadow:0 0 0 2px var(--teal) inset}
+.seg{display:inline-flex;background:var(--tan);border-radius:11px;padding:3px}
+.seg span{padding:5px 12px;border-radius:9px;font-weight:800;font-size:.85rem}.seg .on{background:var(--teal);color:#fff}
+.pl{display:inline-flex;align-items:center;gap:4px;border-radius:99px;padding:4px 10px 4px 6px;margin:0 4px 6px 0;font-weight:700;font-size:.85rem;border:2px solid var(--line);background:var(--card-hi)}
+.pl.on{border-color:var(--teal);background:#d6efe9}
+.toggle{width:40px;height:22px;border-radius:99px;background:var(--teal);position:relative}.toggle:after{content:"";position:absolute;right:3px;top:3px;width:16px;height:16px;border-radius:50%;background:#fff}
+.num{width:56px;padding:6px;border-radius:9px;border:2px solid var(--line);background:#fbf4e2;font-weight:800;text-align:center}
+.draw{background:var(--card-hi);border:2px solid var(--line);border-radius:12px;padding:8px 10px;font-size:.82rem}
+.draw .r{display:grid;grid-template-columns:28px 1fr auto 1fr;gap:6px;align-items:center;padding:4px 0;border-top:1px dashed var(--line)}
+.draw .r:first-child{border-top:0}
+.vs{color:var(--muted);font-weight:800;font-size:.7rem}
+.out{color:var(--muted);font-size:.75rem}
+.note{max-width:1100px;margin:18px auto 0;color:var(--onmat-m);font-size:.9rem}
+.note li{margin:4px 0}
+</style></head><body>
+<div class="intro"><h2>Screen 1 — <code>/tournaments</code> list + create</h2>
+<p>Left: overview page. Right: create page (single scrolling form, live draw preview at the bottom). <b>Tell me in the terminal what to change.</b></p></div>
+
+<div class="grid">
+<!-- LIST -->
+<div class="frame"><div class="lbl">/tournaments</div>
+  <div class="row" style="justify-content:space-between;margin-bottom:12px">
+    <h1 style="font-size:1.5rem">🏆 Tournaments</h1>
+    <button class="btn gold">+ New tournament</button>
+  </div>
+
+  <div class="card">
+    <div class="row" style="justify-content:space-between"><h3 style="color:var(--ink);font-size:1rem">In progress</h3><span class="chip live">● LIVE</span></div>
+    <div class="tour">
+      <div class="trophy">⏳</div>
+      <div><div class="tname">Friday Shuffle</div><div class="muted">Rotating teams · 2v2 · 6 players · Ranked</div>
+        <div class="muted">Round 3 of 5 · 7/12 games played</div></div>
+      <button class="btn ghost">Open</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="color:var(--ink);font-size:1rem;margin-bottom:4px">Finished</h3>
+    <div class="tour">
+      <div class="trophy">🏆</div>
+      <div><div class="tname">September Cup</div><div class="muted">26 Sep 2026 · Knockout · 2v2 · 8 players</div>
+        <div class="win">🥇 🦊 Ann + 🐙 Bob</div></div>
+      <span class="chip">Ranked</span>
+    </div>
+    <div class="tour">
+      <div class="trophy">🏆</div>
+      <div><div class="tname">Lunch League</div><div class="muted">19 Sep 2026 · Fixed teams round-robin · 3v3 · 9 players</div>
+        <div class="win">🥇 🦉 Cas + 🐸 Dee + 🐝 Eli</div></div>
+      <span class="chip">Ranked</span>
+    </div>
+    <div class="tour">
+      <div class="trophy">🏆</div>
+      <div><div class="tname">Practice night</div><div class="muted">12 Sep 2026 · Rotating teams · 2v2 · 5 players</div>
+        <div class="win">🥇 🐙 Bob <span class="muted">(6 pts)</span></div></div>
+      <span class="chip unr">Unranked</span>
+    </div>
+  </div>
+</div>
+
+<!-- CREATE -->
+<div class="frame"><div class="lbl">/tournaments/new</div>
+  <h1 style="font-size:1.5rem;margin-bottom:12px">New tournament</h1>
+  <div class="card">
+    <div class="sec" style="margin-top:0">Name</div>
+    <input class="num" style="width:100%;text-align:left" value="Friday Shuffle">
+
+    <div class="sec">Style</div>
+    <div class="styles">
+      <div class="style sel"><b>🔀 Rotating teams</b>New random teams every round. Individual points.</div>
+      <div class="style"><b>🛡️ Fixed teams</b>Teams drawn once, everyone plays everyone.</div>
+      <div class="style"><b>🥊 Knockout</b>Lose and you're out. Bracket to a final.</div>
+    </div>
+
+    <div class="sec">Format</div>
+    <div class="seg"><span>1v1</span><span class="on">2v2</span><span>3v3</span></div>
+
+    <div class="sec">Players <span style="text-transform:none;font-weight:600">(6 selected)</span></div>
+    <div>
+      <span class="pl on">🦊 Ann</span><span class="pl on">🐙 Bob</span><span class="pl on">🦉 Cas</span><span class="pl on">🐸 Dee</span><span class="pl on">🐝 Eli</span><span class="pl on">🦄 Fay</span><span class="pl">🐢 Gus</span><span class="pl">🦀 Hal</span>
+    </div>
+
+    <div class="row" style="justify-content:space-between;margin-top:12px">
+      <div><div style="font-weight:800">Rounds</div><div class="muted">Rotating only</div></div>
+      <input class="num" value="5">
+    </div>
+    <div class="row" style="justify-content:space-between;margin-top:12px">
+      <div><div style="font-weight:800">Ranked</div><div class="muted">Games count for Elo, board and stats</div></div>
+      <div class="toggle"></div>
+    </div>
+
+    <div class="sec">Draw preview</div>
+    <div class="draw">
+      <div class="r"><b>R1</b><span>🦊 Ann + 🐙 Bob</span><span class="vs">VS</span><span>🦉 Cas + 🐸 Dee</span></div>
+      <div class="r"><b></b><span class="out" style="grid-column:2/5">Sits out: 🐝 Eli, 🦄 Fay</span></div>
+      <div class="r"><b>R2</b><span>🐝 Eli + 🦊 Ann</span><span class="vs">VS</span><span>🦄 Fay + 🦉 Cas</span></div>
+      <div class="r"><b></b><span class="out" style="grid-column:2/5">Sits out: 🐙 Bob, 🐸 Dee</span></div>
+      <div class="r"><b>…</b><span class="out" style="grid-column:2/5">R3–R5</span></div>
+    </div>
+    <div class="row" style="margin-top:12px;justify-content:flex-end">
+      <button class="btn ghost">🎲 Reshuffle</button>
+      <button class="btn">Start tournament</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="note"><b>Open questions on this screen:</b><ul>
+<li>6 players, 2v2 = 3 teams per round but only one match → 2 sit out each round. Alternative: allow <b>2 matches at once</b> if you have 2 decks? (would need 8 players)</li>
+<li>Draw preview + 🎲 Reshuffle before starting — keep, or just "Start" and see the draw after?</li>
+<li>Name field: required, or auto-name ("Tournament 29 Sep")?</li>
+</ul></div>
+</body></html>
