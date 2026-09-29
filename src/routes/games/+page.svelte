@@ -95,11 +95,12 @@
 			<div class="card row">
 				<div class="mid">
 					<div class="line1">
-						<span class="fmt">{g.format}</span><span class="date">
-							{data.isAdmin ? fmtDateTime(g.playedAt) : fmtDate(g.playedAt)}
-						</span>
+						<span class="fmt">{g.format}</span><span class="date">{fmtDate(g.playedAt)}</span>
 						{#if data.isAdmin}
-							<span class="audit">Entered by {g.enteredBy ?? 'unknown'}</span>
+							<span class="audit">
+								Entered by {g.enteredBy ?? 'unknown'}{#if g.createdAt}
+									· {fmtDateTime(g.createdAt)}{/if}
+							</span>
 						{/if}
 					</div>
 					<div class="teams">
