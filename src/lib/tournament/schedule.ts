@@ -18,8 +18,14 @@ export function chunk<T>(items: T[], size: number): T[][] {
 /** Builds the full schedule for a validated setup. Same setup + seed → same draw. */
 export function generateSchedule(setup: TournamentSetup, seed: number): Schedule {
 	const rng = mulberry32(seed);
-	if (setup.style === 'rotating') return rotating(setup, rng);
-	throw new Error(`Unsupported style: ${setup.style}`);
+	switch (setup.style) {
+		case 'rotating':
+			return rotating(setup, rng);
+		case 'fixed':
+			return roundRobin(setup, rng);
+		case 'knockout':
+			return knockout(setup, rng);
+	}
 }
 
 function rotating(setup: TournamentSetup, rng: Rng): Schedule {
@@ -72,4 +78,72 @@ function rotating(setup: TournamentSetup, rng: Rng): Schedule {
 		}
 	}
 	return { teams: null, games };
+}
+
+function drawTeams(setup: TournamentSetup, rng: Rng): number[][] {
+	return chunk(shuffle(setup.playerIds, rng), teamSize(setup.format)).map(sorted);
+}
+
+/** Circle method: team 0 fixed, the rest rotate; every pair meets once. An odd
+    team count adds a phantom (null) — its opponent rests that round. A circle
+    round with more matches than `tables` becomes several numbered rounds. */
+function roundRobin(setup: TournamentSetup, rng: Rng): Schedule {
+	const teams = drawTeams(setup, rng);
+	let ring: (number | null)[] = teams.map((_, i) => i);
+	if (ring.length % 2) ring.push(null);
+	const n = ring.length;
+	const games: ScheduledGame[] = [];
+	let round = 0;
+	for (let r = 0; r < n - 1; r++) {
+		const pairs: [number, number][] = [];
+		for (let i = 0; i < n / 2; i++) {
+			const a = ring[i];
+			const b = ring[n - 1 - i];
+			if (a !== null && b !== null) pairs.push([a, b]);
+		}
+		for (let c = 0; c < pairs.length; c += setup.tables) {
+			round++;
+			pairs
+				.slice(c, c + setup.tables)
+				.forEach(([a, b], slot) => games.push({ round, slot, sideA: teams[a], sideB: teams[b] }));
+		}
+		ring = [ring[0], ring[n - 1], ...ring.slice(1, n - 1)];
+	}
+	return { teams, games };
+}
+
+/** Single elimination. Bracket = next power of 2; byes go straight into their
+    round-2 slot (no round-1 game). Byes fill even slots first so bye teams
+    meet a round-1 winner rather than each other where possible. */
+function knockout(setup: TournamentSetup, rng: Rng): Schedule {
+	const teams = drawTeams(setup, rng);
+	let bracket = 1;
+	while (bracket < teams.length) bracket *= 2;
+	const rounds = Math.log2(bracket);
+	const firstSlots = bracket / 2;
+	const slotOrder = [
+		...Array.from({ length: firstSlots }, (_, i) => i).filter((i) => i % 2 === 0),
+		...Array.from({ length: firstSlots }, (_, i) => i).filter((i) => i % 2 === 1)
+	];
+	const byeSlots = new Set(slotOrder.slice(0, bracket - teams.length));
+	const games: ScheduledGame[] = [];
+	const round2 = new Map<number, { sideA: number[] | null; sideB: number[] | null }>();
+	let next = 0;
+	for (let slot = 0; slot < firstSlots; slot++) {
+		if (byeSlots.has(slot)) {
+			const entry = round2.get(slot >> 1) ?? { sideA: null, sideB: null };
+			if (slot % 2 === 0) entry.sideA = teams[next++];
+			else entry.sideB = teams[next++];
+			round2.set(slot >> 1, entry);
+		} else {
+			games.push({ round: 1, slot, sideA: teams[next++], sideB: teams[next++] });
+		}
+	}
+	for (let r = 2; r <= rounds; r++) {
+		for (let slot = 0; slot < bracket / 2 ** r; slot++) {
+			const pre = r === 2 ? round2.get(slot) : undefined;
+			games.push({ round: r, slot, sideA: pre?.sideA ?? null, sideB: pre?.sideB ?? null });
+		}
+	}
+	return { teams, games };
 }
