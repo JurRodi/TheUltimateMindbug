@@ -15,6 +15,10 @@ export interface PlayerStats {
 	winRate: number;
 	/** Signed current streak: >0 win streak, <0 loss streak, 0 = no games. */
 	streak: number;
+	/** Longest run of consecutive wins ever (≥0). */
+	longestWinStreak: number;
+	/** Longest run of consecutive losses ever (≥0). */
+	longestLossStreak: number;
 }
 
 function rangeStart(range: DateRange, now: Date): number {
@@ -62,13 +66,32 @@ export function playerStats(games: GameInput[], playerId: number, opts: StatsOpt
 		else break;
 	}
 
+	// Longest win/loss runs across the whole (chronological) history.
+	let longestWinStreak = 0;
+	let longestLossStreak = 0;
+	let runWins = 0;
+	let runLosses = 0;
+	for (const { won } of relevant) {
+		if (won) {
+			runWins++;
+			runLosses = 0;
+			if (runWins > longestWinStreak) longestWinStreak = runWins;
+		} else {
+			runLosses++;
+			runWins = 0;
+			if (runLosses > longestLossStreak) longestLossStreak = runLosses;
+		}
+	}
+
 	return {
 		playerId,
 		games: total,
 		wins,
 		losses,
 		winRate: total === 0 ? 0 : wins / total,
-		streak
+		streak,
+		longestWinStreak,
+		longestLossStreak
 	};
 }
 

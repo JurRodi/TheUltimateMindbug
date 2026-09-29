@@ -86,7 +86,16 @@ describe('playerStats', () => {
 
 	it('returns zeros and winRate 0 for a player with no games in filter', () => {
 		const s = playerStats(games, 5, { track: '2v2', range: 'all', now: NOW });
-		expect(s).toEqual({ playerId: 5, games: 0, wins: 0, losses: 0, winRate: 0, streak: 0 });
+		expect(s).toEqual({
+			playerId: 5,
+			games: 0,
+			wins: 0,
+			losses: 0,
+			winRate: 0,
+			streak: 0,
+			longestWinStreak: 0,
+			longestLossStreak: 0
+		});
 	});
 
 	it('computes a signed current streak (most recent games)', () => {
@@ -94,6 +103,72 @@ describe('playerStats', () => {
 		expect(playerStats(games, 4, { track: 'total', range: 'all', now: NOW }).streak).toBe(2);
 		// player 2: game1 W, game2 L, game3 L -> current streak -2
 		expect(playerStats(games, 2, { track: 'total', range: 'all', now: NOW }).streak).toBe(-2);
+	});
+
+	it('computes longest win and loss streaks across all games (not just the current run)', () => {
+		// Chronological W/L run: W L L W W W L  -> longest win 3, longest loss 2.
+		const seq: GameInput[] = [
+			{
+				id: 1,
+				playedAt: '2026-01-01T10:00:00Z',
+				format: '1v1',
+				winnerSide: 'A',
+				sideA: [1],
+				sideB: [2]
+			},
+			{
+				id: 2,
+				playedAt: '2026-01-02T10:00:00Z',
+				format: '1v1',
+				winnerSide: 'B',
+				sideA: [1],
+				sideB: [2]
+			},
+			{
+				id: 3,
+				playedAt: '2026-01-03T10:00:00Z',
+				format: '1v1',
+				winnerSide: 'B',
+				sideA: [1],
+				sideB: [2]
+			},
+			{
+				id: 4,
+				playedAt: '2026-01-04T10:00:00Z',
+				format: '1v1',
+				winnerSide: 'A',
+				sideA: [1],
+				sideB: [2]
+			},
+			{
+				id: 5,
+				playedAt: '2026-01-05T10:00:00Z',
+				format: '1v1',
+				winnerSide: 'A',
+				sideA: [1],
+				sideB: [2]
+			},
+			{
+				id: 6,
+				playedAt: '2026-01-06T10:00:00Z',
+				format: '1v1',
+				winnerSide: 'A',
+				sideA: [1],
+				sideB: [2]
+			},
+			{
+				id: 7,
+				playedAt: '2026-01-07T10:00:00Z',
+				format: '1v1',
+				winnerSide: 'B',
+				sideA: [1],
+				sideB: [2]
+			}
+		];
+		const s = playerStats(seq, 1, { track: 'total', range: 'all', now: NOW });
+		expect(s.longestWinStreak).toBe(3);
+		expect(s.longestLossStreak).toBe(2);
+		expect(s.streak).toBe(-1); // ends on a loss
 	});
 });
 

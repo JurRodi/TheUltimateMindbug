@@ -36,6 +36,11 @@
 	<div class="hero-body">
 		<div class="hero-top">
 			<h1>{data.player.name}</h1>
+			{#if overall.games > 0}
+				<span class="chip {overall.streak > 0 ? 'w' : overall.streak < 0 ? 'l' : 'none'}">
+					{streakText(overall.streak)}
+				</span>
+			{/if}
 			{#if data.rank}<span class="rank">#{data.rank} of {data.rankTotal}</span>{/if}
 		</div>
 		<div class="statrow">
@@ -49,15 +54,21 @@
 				<span class="n">{pct(overall.winRate)}</span><span class="l">Win rate</span>
 			</div>
 			<div class="stat"><span class="n">{overall.games}</span><span class="l">Games</span></div>
+			{#if overall.games > 0}
+				<div class="stat">
+					<span class="n up">{overall.longestWinStreak ? `W${overall.longestWinStreak}` : '–'}</span
+					><span class="l">Longest win</span>
+				</div>
+				<div class="stat">
+					<span class="n down"
+						>{overall.longestLossStreak ? `L${overall.longestLossStreak}` : '–'}</span
+					><span class="l">Longest loss</span>
+				</div>
+			{/if}
 			{#if data.mvps > 0}
 				<div class="stat mvp">
 					<span class="n">{data.mvps}</span><span class="l">MVPs</span>
 				</div>
-			{/if}
-			{#if overall.games > 0}
-				<span class="chip {overall.streak > 0 ? 'w' : overall.streak < 0 ? 'l' : 'none'}"
-					>{streakText(overall.streak)}</span
-				>
 			{/if}
 		</div>
 	</div>
@@ -152,10 +163,12 @@
 	}
 	.hero-top {
 		display: flex;
-		align-items: baseline;
-		justify-content: space-between;
+		align-items: center;
 		gap: 0.6rem;
 		flex-wrap: wrap;
+	}
+	.hero-top .rank {
+		margin-left: auto;
 	}
 	.hero h1 {
 		margin: 0;
@@ -192,6 +205,12 @@
 		text-transform: uppercase;
 		color: var(--muted);
 		font-weight: 800;
+	}
+	.n.up {
+		color: var(--up);
+	}
+	.n.down {
+		color: var(--down);
 	}
 
 	/* Track tiles: 2×2 on phones, 4-up on wider screens. */
