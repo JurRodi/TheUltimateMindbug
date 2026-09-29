@@ -7,7 +7,7 @@ import { weekSummary } from '$lib/stats/summary';
 import type { Track, DateRange } from '$lib/types';
 import type { PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ url, cookies }) => {
+export const load: PageServerLoad = async ({ url, cookies, locals }) => {
 	// The board's view/format/range are sticky: the URL wins when present, else
 	// we fall back to the last selection saved in a cookie, else the default.
 	// This keeps the filter stateful when returning to the board from a detail
@@ -32,11 +32,14 @@ export const load: PageServerLoad = async ({ url, cookies }) => {
 	const now = new Date();
 	const weekAgoIso = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
-	const [players, games, mvpCounts, weeklyMvpCounts] = await Promise.all([
+	// Only add the MVP count queries to the batch when the feature is on; the
+	// destructure defaults cover the disabled case (queries absent from the batch).
+	const empty = new Map<number, number>();
+	const mvpCalls = locals.flags.mvp ? [getMvpCounts(db), getMvpCounts(db, weekAgoIso)] : [];
+	const [players, games, mvpCounts = empty, weeklyMvpCounts = empty] = await Promise.all([
 		getPlayers(db),
 		getAllGames(db),
-		getMvpCounts(db),
-		getMvpCounts(db, weekAgoIso)
+		...mvpCalls
 	]);
 	const nameById = new Map(players.map((p) => [p.id, p.name]));
 	const avatarById = new Map(players.map((p) => [p.id, p.avatar]));

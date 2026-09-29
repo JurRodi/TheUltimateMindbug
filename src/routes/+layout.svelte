@@ -32,7 +32,7 @@
 	<Nav />
 	<main>
 		<div class="wrap" class:wide>
-			{#if data.me}<EnablePushBanner />{/if}
+			{#if data.me && data.flags.mvp}<EnablePushBanner />{/if}
 			{@render children()}
 		</div>
 	</main>

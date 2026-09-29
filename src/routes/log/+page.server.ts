@@ -55,10 +55,13 @@ export const actions: Actions = {
 			sideB,
 			createdBy
 		});
-		try {
-			await onGameLogged(db, gameId, format, playedAt);
-		} catch (err) {
-			console.error('[mvp] onGameLogged failed for game', gameId, err);
+		// Only open an MVP voting round when the feature is enabled.
+		if (locals.flags.mvp) {
+			try {
+				await onGameLogged(db, gameId, format, playedAt);
+			} catch (err) {
+				console.error('[mvp] onGameLogged failed for game', gameId, err);
+			}
 		}
 		throw redirect(303, '/?saved=game');
 	}

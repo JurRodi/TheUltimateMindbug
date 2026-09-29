@@ -5,15 +5,18 @@ import { teamStats, teamGameLog, teamNetSeries, teamStreak } from '$lib/stats/te
 import { creatureFor } from '$lib/creatures';
 import type { PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ params }) => {
+export const load: PageServerLoad = async ({ params, locals }) => {
 	const ids = params.id.split('-').map((s) => Number(s));
 	if (ids.length < 2 || ids.some((n) => !Number.isInteger(n))) throw error(404, 'Team not found');
 	const key = [...ids].sort((a, b) => a - b).join('-');
 
-	const [players, games, mvpCounts] = await Promise.all([
+	// Only add the MVP count query to the batch when the feature is on; the
+	// destructure default covers the disabled case (query absent from the batch).
+	const mvpCalls = locals.flags.mvp ? [getMvpCounts(db)] : [];
+	const [players, games, mvpCounts = new Map<number, number>()] = await Promise.all([
 		getPlayers(db),
 		getAllGames(db),
-		getMvpCounts(db)
+		...mvpCalls
 	]);
 	const now = new Date();
 	const teams = teamStats(games, { track: 'total', range: 'all', now });

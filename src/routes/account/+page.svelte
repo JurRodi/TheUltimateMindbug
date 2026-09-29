@@ -4,6 +4,7 @@
 	import { resolve } from '$app/paths';
 	import { authClient } from '$lib/auth-client';
 	import { CREATURES, creatureFor } from '$lib/creatures';
+	import { FLAGS, FLAG_KEYS } from '$lib/flags';
 	import Toast from '$lib/components/Toast.svelte';
 	import NotificationToggle from '$lib/components/NotificationToggle.svelte';
 
@@ -18,6 +19,8 @@
 	const preview = $derived(selected || creatureFor(data.player.id, data.player.avatar));
 
 	let saving = $state(false);
+	// The key of the flag whose toggle is mid-request, or null when idle.
+	let flagSaving = $state<string | null>(null);
 	let signingOut = $state(false);
 	let toast = $state<string | null>(null);
 
@@ -105,6 +108,41 @@
 <div class="card">
 	<NotificationToggle />
 </div>
+
+{#if data.isAdmin}
+	<h2>Feature flags</h2>
+	<div class="card flags">
+		{#each FLAG_KEYS as key (key)}
+			{@const on = data.flags[key]}
+			<div class="flag">
+				<div class="flag-text">
+					<span class="flag-name">{FLAGS[key].label} {on ? '⭐' : ''}</span>
+					<span class="hint">{FLAGS[key].description}</span>
+				</div>
+				<form
+					method="POST"
+					action="?/setFlag"
+					use:enhance={() => {
+						flagSaving = key;
+						return async ({ result, update }) => {
+							await update({ reset: false });
+							flagSaving = null;
+							if (result.type === 'success')
+								toast = `${FLAGS[key].label} ${on ? 'disabled' : 'enabled'} ✓`;
+						};
+					}}
+				>
+					<input type="hidden" name="key" value={key} />
+					<input type="hidden" name="enabled" value={on ? 'false' : 'true'} />
+					<button class="btn" class:danger={on} type="submit" disabled={flagSaving === key}>
+						{#if flagSaving === key}<span class="spin" aria-hidden="true"></span>{/if}
+						{on ? 'Disable' : 'Enable'}
+					</button>
+				</form>
+			</div>
+		{/each}
+	</div>
+{/if}
 
 <div class="signout-row">
 	<span class="hint"
@@ -293,6 +331,31 @@
 		color: var(--danger);
 		font-weight: 700;
 		margin: 0.6rem 0 0;
+	}
+
+	/* Feature flags (admin only) */
+	.flags {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+	}
+	.flag {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
+		flex-wrap: wrap;
+	}
+	.flag-text {
+		display: flex;
+		flex-direction: column;
+		gap: 0.2rem;
+		min-width: 0;
+	}
+	.flag-name {
+		font-family: var(--display);
+		font-weight: 800;
+		color: var(--ink);
 	}
 
 	/* Sign out, set apart at the foot of the page. */

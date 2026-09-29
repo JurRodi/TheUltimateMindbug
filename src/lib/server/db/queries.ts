@@ -1,15 +1,39 @@
 import { eq, asc, sql, and, desc, gte, inArray, isNotNull, isNull } from 'drizzle-orm';
 import type { PgDatabase } from 'drizzle-orm/pg-core';
 import * as schema from './schema';
-import { players, games, gameParticipants, mvpRounds, mvpVotes, pushSubscriptions } from './schema';
+import {
+	players,
+	games,
+	gameParticipants,
+	mvpRounds,
+	mvpVotes,
+	pushSubscriptions,
+	appSettings
+} from './schema';
 import { toGameInputs, type GameRow, type ParticipantRow } from './shape';
 import { isValidAvatar, creatureFor } from '$lib/creatures';
+import { resolveFlags, type FlagKey, type Flags } from '$lib/flags';
 import type { Player, AdminPlayer, GameInput, Format, Side } from '$lib/types';
 
 // The query-result HKT parameter must be `any` here: neon-http and pglite each
 // supply a different concrete PgQueryResultHKT, and this type needs to accept both.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type DB = PgDatabase<any, typeof schema>;
+
+/** Resolve every feature flag from stored settings (applying registry defaults). */
+export async function getFlags(db: DB): Promise<Flags> {
+	const rows = await db.select().from(appSettings);
+	return resolveFlags(rows.map((r) => ({ key: r.key, value: r.value })));
+}
+
+/** Turn a feature flag on or off (upsert, last write wins). */
+export async function setFlag(db: DB, key: FlagKey, on: boolean): Promise<void> {
+	const value = on ? 'true' : 'false';
+	await db
+		.insert(appSettings)
+		.values({ key, value })
+		.onConflictDoUpdate({ target: appSettings.key, set: { value, updatedAt: new Date() } });
+}
 
 function toPlayer(row: typeof players.$inferSelect): Player {
 	return {

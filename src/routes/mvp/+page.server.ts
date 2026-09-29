@@ -1,5 +1,5 @@
 import { fail } from '@sveltejs/kit';
-import { requireAuth } from '$lib/server/authz';
+import { requireAuth, requireFlag } from '$lib/server/authz';
 import { db } from '$lib/server/db';
 import {
 	getOpenRoundsForPlayer,
@@ -12,6 +12,8 @@ import { processTick, recomputeAfterVote } from '$lib/server/mvp';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
+	// Feature-flagged: when MVP is off the page is not part of the app.
+	requireFlag(locals.flags, 'mvp');
 	// Lazy resolution: visiting the page closes any rounds whose deadline has
 	// passed (or that already have enough votes) instead of waiting on a cron.
 	await processTick(db);
@@ -30,6 +32,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 export const actions: Actions = {
 	vote: async ({ request, locals }) => {
+		if (!locals.flags.mvp) return fail(403, { error: 'MVP voting is disabled' });
 		requireAuth(locals.auth);
 		const voterId = locals.auth.player!.id;
 		const form = await request.formData();

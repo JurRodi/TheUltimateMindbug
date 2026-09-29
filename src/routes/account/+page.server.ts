@@ -1,6 +1,8 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
-import { getPlayers, getAllGames, updatePlayerProfile } from '$lib/server/db/queries';
+import { getPlayers, getAllGames, updatePlayerProfile, setFlag } from '$lib/server/db/queries';
+import { requireAdmin } from '$lib/server/authz';
+import { isFlagKey } from '$lib/flags';
 import { computeRatings } from '$lib/rating/engine';
 import { playerStats } from '$lib/stats/aggregate';
 import { creatureFor, isValidAvatar } from '$lib/creatures';
@@ -58,5 +60,16 @@ export const actions: Actions = {
 			return fail(400, { error: 'That name is already taken' });
 		}
 		return { ok: true };
+	},
+
+	setFlag: async ({ request, locals }) => {
+		// Admin-only feature flags. requireAdmin redirects a non-admin to /login.
+		requireAdmin(locals.auth);
+		const form = await request.formData();
+		const key = String(form.get('key'));
+		if (!isFlagKey(key)) return fail(400, { error: 'Unknown feature flag' });
+		const enabled = String(form.get('enabled')) === 'true';
+		await setFlag(db, key, enabled);
+		return { flagOk: true };
 	}
 };

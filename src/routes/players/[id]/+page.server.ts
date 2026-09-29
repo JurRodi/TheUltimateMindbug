@@ -9,15 +9,18 @@ import type { PageServerLoad } from './$types';
 
 const TRACKS: Track[] = ['total', '1v1', '2v2', '3v3'];
 
-export const load: PageServerLoad = async ({ params }) => {
+export const load: PageServerLoad = async ({ params, locals }) => {
 	const id = Number(params.id);
 	if (!Number.isInteger(id)) throw error(404, 'Player not found');
 
-	const [player, players, games, mvpCounts] = await Promise.all([
+	// Only add the MVP count query to the batch when the feature is on; the
+	// destructure default covers the disabled case (query absent from the batch).
+	const mvpCalls = locals.flags.mvp ? [getMvpCounts(db)] : [];
+	const [player, players, games, mvpCounts = new Map<number, number>()] = await Promise.all([
 		getPlayer(db, id),
 		getPlayers(db),
 		getAllGames(db),
-		getMvpCounts(db)
+		...mvpCalls
 	]);
 	if (!player) throw error(404, 'Player not found');
 

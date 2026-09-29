@@ -154,7 +154,9 @@
 							<div class="row">
 								<span>record</span><span>{topTeam.wins}W · {topTeam.losses}L</span>
 							</div>
-							<div class="row"><span>MVPs</span><span>{topTeam.mvps}</span></div>
+							{#if data.flags.mvp}
+								<div class="row"><span>MVPs</span><span>{topTeam.mvps}</span></div>
+							{/if}
 						</div>
 					</details>
 				{/if}
@@ -175,9 +177,11 @@
 									: '–'}</span
 							>
 						</div>
-						<div class="row">
-							<span>MVP of week</span><span>{data.weekly.mvp ? data.weekly.mvp.name : '–'}</span>
-						</div>
+						{#if data.flags.mvp}
+							<div class="row">
+								<span>MVP of week</span><span>{data.weekly.mvp ? data.weekly.mvp.name : '–'}</span>
+							</div>
+						{/if}
 					</div>
 				</details>
 				<details class="info card-collapse">
@@ -185,8 +189,9 @@
 					<div class="cc-body">
 						<div class="legend">
 							<span class="chip">40 GP</span> games · <span class="chip w">18W</span> wins ·
-							<span class="chip l">7L</span> losses · <b style="color: #fff">72%</b> win rate ·
-							<span class="chip mvp">3 MVP</span> most valuable plays
+							<span class="chip l">7L</span> losses · <b style="color: #fff">72%</b> win rate{#if data.flags.mvp}
+								·
+								<span class="chip mvp">3 MVP</span> most valuable plays{/if}
 						</div>
 						<p class="rule-note">Teams need 3+ games to rank on win rate.</p>
 					</div>
@@ -234,7 +239,9 @@
 							<span>rating</span><span>{champ.rated ? champ.rating : '—'}</span>
 						</div>
 						<div class="row"><span>streak</span><span>{champStreak(champ.streak)}</span></div>
-						<div class="row"><span>MVPs</span><span>{champ.mvps}</span></div>
+						{#if data.flags.mvp}
+							<div class="row"><span>MVPs</span><span>{champ.mvps}</span></div>
+						{/if}
 					</div>
 				</details>
 			{/if}
@@ -255,9 +262,11 @@
 								: '–'}</span
 						>
 					</div>
-					<div class="row">
-						<span>MVP of week</span><span>{data.weekly.mvp ? data.weekly.mvp.name : '–'}</span>
-					</div>
+					{#if data.flags.mvp}
+						<div class="row">
+							<span>MVP of week</span><span>{data.weekly.mvp ? data.weekly.mvp.name : '–'}</span>
+						</div>
+					{/if}
 				</div>
 			</details>
 			<details class="info card-collapse">
@@ -266,8 +275,10 @@
 					<div class="legend">
 						<span class="chip">40 GP</span> games · <span class="chip">64%</span> win rate ·
 						<span class="chip w">W5</span> win streak · <span class="chip l">L3</span> loss streak ·
-						<span class="chip none">–</span> none · <b style="color: #fff">1187</b> rating ·
-						<span class="chip mvp">3 MVP</span> most valuable plays
+						<span class="chip none">–</span> none · <b style="color: #fff">1187</b>
+						rating{#if data.flags.mvp}
+							·
+							<span class="chip mvp">3 MVP</span> most valuable plays{/if}
 					</div>
 				</div>
 			</details>
