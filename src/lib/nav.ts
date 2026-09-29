@@ -1,6 +1,6 @@
 import type { FlagKey, Flags } from './flags';
 
-export type NavHref = '/' | '/mvp' | '/players' | '/log' | '/games';
+export type NavHref = '/' | '/tournaments' | '/mvp' | '/players' | '/log' | '/games';
 export type NavLink = { href: NavHref; label: string; icon: string };
 
 export type NavContext = { isAdmin: boolean; flags: Flags };
@@ -18,6 +18,7 @@ type LinkDef = NavLink & { adminOnly?: boolean; flag?: FlagKey };
 
 const CANDIDATES: LinkDef[] = [
 	{ href: '/', label: 'Board', icon: '📊' },
+	{ href: '/tournaments', label: 'Tournaments', icon: '🏆' },
 	{ href: '/mvp', label: 'MVP', icon: '⭐', flag: 'mvp' },
 	{ href: '/players', label: 'Players', icon: '👾', adminOnly: true },
 	{ href: '/log', label: 'Log', icon: '➕' },

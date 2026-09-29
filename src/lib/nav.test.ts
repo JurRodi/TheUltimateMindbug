@@ -23,13 +23,14 @@ describe('navLinks', () => {
 			{ isAdmin: true, flags: on },
 			{ isAdmin: false, flags: off }
 		]) {
-			expect(labels(ctx)).toEqual(expect.arrayContaining(['Board', 'Log', 'Games']));
+			expect(labels(ctx)).toEqual(expect.arrayContaining(['Board', 'Tournaments', 'Log', 'Games']));
 		}
 	});
 
 	it('keeps a stable order', () => {
 		expect(labels({ isAdmin: true, flags: on })).toEqual([
 			'Board',
+			'Tournaments',
 			'MVP',
 			'Players',
 			'Log',
