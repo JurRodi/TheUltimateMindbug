@@ -172,8 +172,13 @@ export async function insertGame(
 	return Number(rows[0].id);
 }
 
-export async function deleteGame(db: DB, id: number): Promise<void> {
-	await db.delete(games).where(eq(games.id, id));
+/** Deletes a one-off game. Tournament games are refused: removing one would
+    break its schedule/bracket — they are managed on the tournament page. */
+export async function deleteGame(db: DB, id: number): Promise<'ok' | 'tournament'> {
+	const rows = await db.select({ t: games.tournamentId }).from(games).where(eq(games.id, id));
+	if (rows[0]?.t != null) return 'tournament';
+	await db.delete(games).where(and(eq(games.id, id), isNull(games.tournamentId)));
+	return 'ok';
 }
 
 /** Games that feed the rating engine and stats: played (has a winner) and

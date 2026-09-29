@@ -28,6 +28,7 @@ export const actions: Actions = {
 		const playedAt = parseTimestamp(String(form.get('playedAt') || new Date().toISOString()));
 		const sideA = form.getAll('sideA').map(Number).filter(Boolean);
 		const sideB = form.getAll('sideB').map(Number).filter(Boolean);
+		const ranked = form.get('ranked') !== 'false';
 
 		const size = format === '1v1' ? 1 : format === '2v2' ? 2 : 3;
 		if (format !== '1v1' && format !== '2v2' && format !== '3v3')
@@ -53,6 +54,7 @@ export const actions: Actions = {
 			winnerSide,
 			sideA,
 			sideB,
+			ranked,
 			createdBy
 		});
 		// Only open an MVP voting round when the feature is enabled.

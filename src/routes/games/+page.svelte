@@ -96,6 +96,12 @@
 				<div class="mid">
 					<div class="line1">
 						<span class="fmt">{g.format}</span><span class="date">{fmtDate(g.playedAt)}</span>
+						{#if !g.ranked}<span class="fmt unr">Unranked</span>{/if}
+						{#if g.tournament}
+							<a class="tlink" href={resolve('/tournaments/[id]', { id: String(g.tournament.id) })}
+								>🏆 {g.tournament.name} · R{g.tournament.round}</a
+							>
+						{/if}
 						{#if data.isAdmin}
 							<span class="audit">
 								Entered by {g.enteredBy ?? 'unknown'}{#if g.createdAt}
@@ -119,7 +125,7 @@
 						</span>
 					</div>
 				</div>
-				{#if data.isAdmin}
+				{#if data.isAdmin && !g.tournament}
 					<div class="actions">
 						{#if confirmingId === g.id}
 							<form
@@ -206,6 +212,19 @@
 		border-radius: 6px;
 		background: var(--surface-2);
 		color: var(--muted);
+	}
+	.fmt.unr {
+		background: #cbb98f;
+		color: #4a3d24;
+	}
+	.tlink {
+		font-size: 0.72rem;
+		font-weight: 800;
+		color: var(--teal);
+		text-decoration: none;
+	}
+	.tlink:hover {
+		text-decoration: underline;
 	}
 	.date {
 		font-size: 0.72rem;

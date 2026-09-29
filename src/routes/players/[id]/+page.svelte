@@ -115,7 +115,9 @@
 				us={[{ id: data.player.id, name: data.player.name, emoji: data.avatar }, ...g.teammates]}
 				opponents={g.opponents}
 				youId={data.player.id}
-				valueText={`${g.delta >= 0 ? '+' : ''}${g.delta}`}
+				ranked={g.ranked}
+				tournament={g.tournament}
+				valueText={g.ranked ? `${g.delta >= 0 ? '+' : ''}${g.delta}` : '±0'}
 				valueUp={g.delta >= 0}
 			/>
 		{/each}

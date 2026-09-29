@@ -259,4 +259,39 @@ describe('ranked and scheduled games', () => {
 		const [g] = await getGameHistory(db);
 		expect(g).toMatchObject({ id, tournament: { id: t.id, name: 'Cup', round: 2 } });
 	});
+
+	it('deleteGame refuses tournament games', async () => {
+		const [a, b, c, d] = await four();
+		const [t] = await db
+			.insert(tournaments)
+			.values({
+				name: 'Cup',
+				style: 'rotating',
+				format: '2v2',
+				ranked: true,
+				rounds: 1,
+				tables: 1,
+				seed: 1,
+				createdBy: a.id
+			})
+			.returning();
+		const id = await insertGame(db, {
+			playedAt: '2026-01-01T10:00:00.000Z',
+			format: '2v2',
+			winnerSide: 'A',
+			sideA: [a.id, b.id],
+			sideB: [c.id, d.id]
+		});
+		await db.update(gamesTable).set({ tournamentId: t.id, round: 1, slot: 0 });
+		expect(await deleteGame(db, id)).toBe('tournament');
+		expect(await getGameHistory(db)).toHaveLength(1);
+		const plain = await insertGame(db, {
+			playedAt: '2026-01-02T10:00:00.000Z',
+			format: '2v2',
+			winnerSide: 'A',
+			sideA: [a.id, b.id],
+			sideB: [c.id, d.id]
+		});
+		expect(await deleteGame(db, plain)).toBe('ok');
+	});
 });

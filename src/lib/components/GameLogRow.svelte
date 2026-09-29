@@ -10,7 +10,11 @@
 		opponents,
 		youId = null,
 		valueText,
-		valueUp
+		valueUp,
+		/** False = casual/unranked game: shows a badge. */
+		ranked = true,
+		/** Set when the game belongs to a tournament: shows a link to it. */
+		tournament = null
 	}: {
 		won: boolean;
 		format: string;
@@ -23,6 +27,8 @@
 		/** Right-hand metric already formatted (e.g. "+12", "-3"). */
 		valueText: string;
 		valueUp: boolean;
+		ranked?: boolean;
+		tournament?: { id: number; name: string; round: number } | null;
 	} = $props();
 
 	const fmtDate = (iso: string) =>
@@ -34,6 +40,12 @@
 	<div class="mid">
 		<div class="line1">
 			<span class="fmt">{format}</span><span class="date">{fmtDate(playedAt)}</span>
+			{#if !ranked}<span class="fmt unr">Unranked</span>{/if}
+			{#if tournament}
+				<a class="tlink" href={resolve('/tournaments/[id]', { id: String(tournament.id) })}
+					>🏆 {tournament.name} · R{tournament.round}</a
+				>
+			{/if}
 		</div>
 		<div class="teams">
 			<!-- The winning team is highlighted: green when "us" won, red around the
@@ -105,6 +117,19 @@
 		border-radius: 6px;
 		background: var(--surface-2);
 		color: var(--muted);
+	}
+	.fmt.unr {
+		background: #cbb98f;
+		color: #4a3d24;
+	}
+	.tlink {
+		font-size: 0.72rem;
+		font-weight: 800;
+		color: var(--teal);
+		text-decoration: none;
+	}
+	.tlink:hover {
+		text-decoration: underline;
 	}
 	.date {
 		font-size: 0.72rem;

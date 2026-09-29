@@ -1,6 +1,12 @@
 import { error } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
-import { getPlayer, getPlayers, getAllGames, getMvpCounts } from '$lib/server/db/queries';
+import {
+	getPlayer,
+	getPlayers,
+	getAllGames,
+	getGameHistory,
+	getMvpCounts
+} from '$lib/server/db/queries';
 import { computeRatings } from '$lib/rating/engine';
 import { playerStats, playerGameLog } from '$lib/stats/aggregate';
 import { creatureFor } from '$lib/creatures';
@@ -16,12 +22,14 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 	// Only add the MVP count query to the batch when the feature is on; the
 	// destructure default covers the disabled case (query absent from the batch).
 	const mvpCalls = locals.flags.mvp ? [getMvpCounts(db)] : [];
-	const [player, players, games, mvpCounts = new Map<number, number>()] = await Promise.all([
-		getPlayer(db, id),
-		getPlayers(db),
-		getAllGames(db),
-		...mvpCalls
-	]);
+	const [player, players, games, historyGames, mvpCounts = new Map<number, number>()] =
+		await Promise.all([
+			getPlayer(db, id),
+			getPlayers(db),
+			getAllGames(db),
+			getGameHistory(db),
+			...mvpCalls
+		]);
 	if (!player) throw error(404, 'Player not found');
 
 	const ratings = computeRatings(games);
@@ -61,15 +69,21 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 	const deltaByGame = new Map(
 		ratings.total.history.filter((h) => h.playerId === id).map((h) => [h.gameId, h.delta])
 	);
-	const history = playerGameLog(games, id, deltaByGame).map((e) => ({
-		gameId: e.gameId,
-		playedAt: e.playedAt,
-		format: e.format,
-		won: e.won,
-		delta: e.delta,
-		teammates: e.teammateIds.map(resolve),
-		opponents: e.opponentIds.map(resolve)
-	}));
+	const historyById = new Map(historyGames.map((g) => [g.id, g]));
+	const history = playerGameLog(historyGames, id, deltaByGame).map((e) => {
+		const g = historyById.get(e.gameId)!;
+		return {
+			gameId: e.gameId,
+			playedAt: e.playedAt,
+			format: e.format,
+			won: e.won,
+			delta: e.delta,
+			ranked: g.ranked,
+			tournament: g.tournament,
+			teammates: e.teammateIds.map(resolve),
+			opponents: e.opponentIds.map(resolve)
+		};
+	});
 
 	return {
 		player,

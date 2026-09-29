@@ -1,7 +1,7 @@
 import { fail } from '@sveltejs/kit';
 import { requireAdmin } from '$lib/server/authz';
 import { db } from '$lib/server/db';
-import { getAllGames, getPlayers, deleteGame, getGamesMeta } from '$lib/server/db/queries';
+import { getGameHistory, getPlayers, deleteGame, getGamesMeta } from '$lib/server/db/queries';
 import { creatureFor } from '$lib/creatures';
 import { paginateByDate } from '$lib/stats/paginate';
 import type { Actions, PageServerLoad } from './$types';
@@ -16,7 +16,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	// entirely for public viewers so it is never fetched or serialized.
 	const [players, games, meta] = await Promise.all([
 		getPlayers(db),
-		getAllGames(db),
+		getGameHistory(db),
 		isAdmin ? getGamesMeta(db) : Promise.resolve([])
 	]);
 	const nameById = new Map(players.map((p) => [p.id, p.name]));
@@ -34,6 +34,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 				id: g.id,
 				playedAt: g.playedAt,
 				format: g.format,
+				ranked: g.ranked,
+				tournament: g.tournament,
 				winnerSide: g.winnerSide,
 				sideA: g.sideA.map(resolve),
 				sideB: g.sideB.map(resolve),
@@ -89,7 +91,8 @@ export const actions: Actions = {
 		const form = await request.formData();
 		const id = Number(form.get('id'));
 		if (!Number.isInteger(id) || id <= 0) return fail(400, { error: 'Invalid game' });
-		await deleteGame(db, id);
+		if ((await deleteGame(db, id)) === 'tournament')
+			return fail(400, { error: 'Tournament games are managed on the tournament page' });
 		return { ok: true };
 	}
 };

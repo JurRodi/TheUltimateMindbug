@@ -6,6 +6,7 @@
 	let format = $state<'1v1' | '2v2' | '3v3'>('2v2');
 	let size = $derived(format === '1v1' ? 1 : format === '2v2' ? 2 : 3);
 	let winnerSide = $state<'A' | 'B'>('A');
+	let ranked = $state(true);
 
 	// Fixed-length backing arrays; only the first `size` slots are rendered/submitted.
 	let sideA = $state<(number | null)[]>([null, null, null]);
@@ -44,6 +45,7 @@
 >
 	<input type="hidden" name="format" value={format} />
 	<input type="hidden" name="winnerSide" value={winnerSide} />
+	<input type="hidden" name="ranked" value={String(ranked)} />
 
 	<div class="seg">
 		<button type="button" class:on={format === '1v1'} onclick={() => (format = '1v1')}>1v1</button>
@@ -78,6 +80,14 @@
 			>
 		</div>
 	</div>
+
+	<label class="rankedfield">
+		<span>
+			<span class="dlbl">Ranked</span>
+			<span class="hint">Off = casual game: logged, but no Elo or stats impact</span>
+		</span>
+		<input type="checkbox" class="switch" bind:checked={ranked} />
+	</label>
 
 	<label class="datefield">
 		<span class="dlbl"
@@ -213,6 +223,45 @@
 	}
 	.wonbtn.won:active {
 		transform: translateY(1px);
+	}
+	.rankedfield {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
+	}
+	.rankedfield .hint {
+		display: block;
+		font-size: 0.78rem;
+		color: var(--muted);
+	}
+	.switch {
+		appearance: none;
+		width: 42px;
+		height: 24px;
+		border-radius: 999px;
+		background: var(--surface-2);
+		position: relative;
+		cursor: pointer;
+		flex: none;
+		transition: background 0.15s ease;
+	}
+	.switch::after {
+		content: '';
+		position: absolute;
+		top: 3px;
+		left: 3px;
+		width: 18px;
+		height: 18px;
+		border-radius: 50%;
+		background: #fff;
+		transition: transform 0.15s ease;
+	}
+	.switch:checked {
+		background: var(--teal);
+	}
+	.switch:checked::after {
+		transform: translateX(18px);
 	}
 	.datefield {
 		display: grid;
