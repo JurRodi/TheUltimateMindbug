@@ -5,6 +5,8 @@
 	import Nav from '$lib/components/Nav.svelte';
 	import NavProgress from '$lib/components/NavProgress.svelte';
 	import EnablePushBanner from '$lib/components/EnablePushBanner.svelte';
+	import Toast from '$lib/components/Toast.svelte';
+	import { toast } from '$lib/toast.svelte';
 	let { children, data } = $props();
 	// The board (home route) has a two-column board+aside layout, so it gets a
 	// wider max-width on desktop; the form/list pages stay a narrower reading width.
@@ -28,6 +30,7 @@
 </script>
 
 <NavProgress />
+{#if toast.message}<Toast message={toast.message} ondone={() => (toast.message = null)} />{/if}
 <div class="shell">
 	<Nav />
 	<main>

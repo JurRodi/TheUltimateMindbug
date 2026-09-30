@@ -11,7 +11,11 @@
 		perspective = false,
 		fadeLoser = false,
 		link = true,
-		youId = null
+		youId = null,
+		youLabel = null,
+		checked = [],
+		highlightA = false,
+		connector = 'vs'
 	}: {
 		teamA: Member[];
 		teamB: Member[];
@@ -25,9 +29,18 @@
 		fadeLoser?: boolean;
 		link?: boolean;
 		youId?: number | null;
+		/** Shown instead of the `youId` player's name (e.g. "You"). */
+		youLabel?: string | null;
+		/** Player ids that get a ✓ badge. */
+		checked?: number[];
+		/** Always tint team A green (the viewer's own side), whoever won. */
+		highlightA?: boolean;
+		/** Word between the teams, e.g. "def." / "lost to". */
+		connector?: string;
 	} = $props();
 
 	const tone = (side: 'A' | 'B') => {
+		if (highlightA) return side === 'A' ? 'win good' : '';
 		if (winner !== side) return fadeLoser && winner ? 'lose' : '';
 		return perspective && side === 'B' ? 'win bad' : 'win good';
 	};
@@ -39,7 +52,14 @@
 			<span class="tbd">{label}</span>
 		{:else}
 			{#each members as p (p.id)}
-				<PlayerChip {...p} {link} you={youId !== null && p.id === youId} />
+				{@const you = youId !== null && p.id === youId}
+				<PlayerChip
+					{...p}
+					{link}
+					{you}
+					label={you ? youLabel : null}
+					checked={checked.includes(p.id)}
+				/>
 			{/each}
 		{/if}
 	</span>
@@ -47,7 +67,7 @@
 
 <div class="teams">
 	{@render team(teamA, labelA, tone('A'))}
-	<span class="vs">vs</span>
+	<span class="vs">{connector}</span>
 	{@render team(teamB, labelB, tone('B'))}
 </div>
 

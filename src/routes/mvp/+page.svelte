@@ -1,11 +1,10 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import type { SubmitFunction } from '@sveltejs/kit';
-	import Toast from '$lib/components/Toast.svelte';
+	import Matchup from '$lib/components/Matchup.svelte';
+	import ExpandableList from '$lib/components/ExpandableList.svelte';
+	import { shortDate as fmtDate } from '$lib/format';
+	import { track } from '$lib/enhance';
 	let { data, form } = $props();
-
-	const fmtDate = (iso: string) =>
-		new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
 	const countdown = (iso: string) => {
 		const h = Math.max(0, Math.round((new Date(iso).getTime() - Date.now()) / 3.6e6));
@@ -14,11 +13,6 @@
 
 	// One radio selection per open round, keyed by gameId.
 	let picked = $state<Record<number, number | undefined>>({});
-
-	// Whether a given player has already cast a ballot in a round — drives both
-	// the ✓ badge on their chip and the live turnout count. Works for open and
-	// voted rounds alike (both carry `voterIds`).
-	const didVote = (voterIds: number[], id: number) => voterIds.includes(id);
 
 	// Candidates exclude the voter — you can't vote for yourself.
 	const candidatesFor = (r: (typeof data.openRounds)[number]) =>
@@ -37,32 +31,71 @@
 		return { needed: Math.ceil(total / 2), total };
 	};
 
-	// Recent results: show the last 5, expandable to all (like the player page log).
-	let expanded = $state(false);
-	const shownResults = $derived(expanded ? data.results : data.results.slice(0, 5));
-
 	// In-flight vote submissions, keyed by gameId, so each ballot shows its own
 	// button spinner without disabling the others.
 	let submitting = $state<Record<number, boolean>>({});
 
-	// On a successful vote, run the default enhance behavior — which re-runs `load`,
-	// so the round leaves "Awaiting" (count drops) and reappears under "Voted" — then
-	// show a confirmation toast. `submitting` gates the button while the request is
-	// in flight (set true when the form submits, cleared once `update()` resolves).
-	let toast = $state<string | null>(null);
-	const voteEnhance =
-		(gameId: number): SubmitFunction =>
-		() => {
-			submitting[gameId] = true;
-			return async ({ result, update }) => {
-				await update();
-				submitting[gameId] = false;
-				if (result.type === 'success') toast = 'Vote locked in ✓';
-			};
-		};
+	// On a successful vote the default update re-runs `load`, so the round leaves
+	// "Awaiting" and reappears under "Voted".
+	const voteEnhance = (gameId: number) =>
+		track({ pending: (on) => (submitting[gameId] = on), success: 'Vote locked in ✓' });
+
+	type Round = {
+		format: string;
+		playedAt: string;
+		deadline: string;
+		side: string;
+		winnerSide: string;
+		voterIds: number[];
+		us: { id: number; name: string; emoji: string }[];
+		them: { id: number; name: string; emoji: string }[];
+	};
 </script>
 
-{#if toast}<Toast message={toast} ondone={() => (toast = null)} />{/if}
+<!-- Format · date · countdown, then the matchup (✓ on players who voted). -->
+{#snippet roundHead(r: Round)}
+	<div class="top">
+		<div class="meta">
+			<span class="fmt">{r.format}</span>
+			<span class="date">{fmtDate(r.playedAt)}</span>
+		</div>
+		<span class="cd">
+			<svg
+				width="13"
+				height="13"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2.2"
+				stroke-linecap="round"
+				stroke-linejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg
+			>
+			{countdown(r.deadline)}
+		</span>
+	</div>
+	<div class="matchup">
+		<Matchup
+			teamA={r.us}
+			teamB={r.them}
+			connector={wonRound(r) ? 'def.' : 'lost to'}
+			highlightA
+			youId={data.myId}
+			youLabel="You"
+			checked={r.voterIds}
+			link={false}
+		/>
+	</div>
+	<div class="divider"></div>
+{/snippet}
+
+{#snippet turnout(r: Round)}
+	{@const q = quorum(r)}
+	<span class="turnout">
+		<span class="kc">✓</span>
+		<b>{r.voterIds.length}</b> of {q.total} voted
+		<span class="need">({q.needed} needed to count)</span>
+	</span>
+{/snippet}
 
 <h1>Most Valuable Play</h1>
 <p class="sub">Vote for the standout player after every game.</p>
@@ -74,54 +107,9 @@
 	</div>
 	<div class="stack">
 		{#each data.openRounds as r (r.gameId)}
-			{@const q = quorum(r)}
 			<form method="POST" action="?/vote" use:enhance={voteEnhance(r.gameId)} class="card ballot">
 				<input type="hidden" name="gameId" value={r.gameId} />
-				<div class="top">
-					<div class="meta">
-						<span class="fmt">{r.format}</span>
-						<span class="date">{fmtDate(r.playedAt)}</span>
-					</div>
-					<span class="cd">
-						<svg
-							width="13"
-							height="13"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="2.2"
-							stroke-linecap="round"
-							stroke-linejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg
-						>
-						{countdown(r.deadline)}
-					</span>
-				</div>
-
-				<div class="matchup">
-					<span class="teamgrp us">
-						{#each r.us as p (p.id)}
-							<span
-								class="pchip"
-								class:you={p.id === data.myId}
-								class:voted={didVote(r.voterIds, p.id)}
-							>
-								<span class="em">{p.emoji}</span>{p.id === data.myId ? 'You' : p.name}
-								{#if didVote(r.voterIds, p.id)}<span class="vcheck" title="Voted">✓</span>{/if}
-							</span>
-						{/each}
-					</span>
-					<span class="def">{wonRound(r) ? 'def.' : 'lost to'}</span>
-					<span class="teamgrp">
-						{#each r.them as p (p.id)}
-							<span class="pchip" class:voted={didVote(r.voterIds, p.id)}>
-								<span class="em">{p.emoji}</span>{p.name}
-								{#if didVote(r.voterIds, p.id)}<span class="vcheck" title="Voted">✓</span>{/if}
-							</span>
-						{/each}
-					</span>
-				</div>
-
-				<div class="divider"></div>
+				{@render roundHead(r)}
 
 				<div class="q">Who was the MVP?</div>
 				<div class="cands">
@@ -171,11 +159,7 @@
 				{#if form?.error}<p class="err">{form.error}</p>{/if}
 
 				<div class="footer">
-					<span class="turnout">
-						<span class="kc">✓</span>
-						<b>{r.voterIds.length}</b> of {q.total} voted
-						<span class="need">({q.needed} needed to count)</span>
-					</span>
+					{@render turnout(r)}
 					<button class="btn" type="submit" disabled={!picked[r.gameId] || submitting[r.gameId]}>
 						{#if submitting[r.gameId]}<span class="spin"></span>Casting…{:else}Cast final vote{/if}
 					</button>
@@ -192,62 +176,15 @@
 	</div>
 	<div class="stack">
 		{#each data.votedRounds as r (r.gameId)}
-			{@const q = quorum(r)}
 			<div class="card voted-card">
-				<div class="top">
-					<div class="meta">
-						<span class="fmt">{r.format}</span>
-						<span class="date">{fmtDate(r.playedAt)}</span>
-					</div>
-					<span class="cd">
-						<svg
-							width="13"
-							height="13"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="2.2"
-							stroke-linecap="round"
-							stroke-linejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg
-						>
-						{countdown(r.deadline)}
-					</span>
-				</div>
-				<div class="matchup">
-					<span class="teamgrp us">
-						{#each r.us as p (p.id)}
-							<span
-								class="pchip"
-								class:you={p.id === data.myId}
-								class:voted={didVote(r.voterIds, p.id)}
-							>
-								<span class="em">{p.emoji}</span>{p.id === data.myId ? 'You' : p.name}
-								{#if didVote(r.voterIds, p.id)}<span class="vcheck" title="Voted">✓</span>{/if}
-							</span>
-						{/each}
-					</span>
-					<span class="def">{wonRound(r) ? 'def.' : 'lost to'}</span>
-					<span class="teamgrp">
-						{#each r.them as p (p.id)}
-							<span class="pchip" class:voted={didVote(r.voterIds, p.id)}>
-								<span class="em">{p.emoji}</span>{p.name}
-								{#if didVote(r.voterIds, p.id)}<span class="vcheck" title="Voted">✓</span>{/if}
-							</span>
-						{/each}
-					</span>
-				</div>
-				<div class="divider"></div>
+				{@render roundHead(r)}
 				<div class="votedrow">
 					{#if r.myVote}
 						<span class="votedfor">
 							<span class="av">{r.myVote.emoji}</span>You voted for {r.myVote.name}
 						</span>
 					{/if}
-					<span class="turnout">
-						<span class="kc">✓</span>
-						<b>{r.voterIds.length}</b> of {q.total} voted
-						<span class="need">({q.needed} needed to count)</span>
-					</span>
+					{@render turnout(r)}
 					<span class="hidden-note">
 						<svg
 							width="15"
@@ -272,19 +209,8 @@
 
 {#if data.results.length}
 	<h2 class="sectitle">Recent MVPs</h2>
-	<div class="games-head">
-		<span class="rescount">
-			{#if expanded}All {data.results.length}{:else}Last {shownResults.length} of {data.results
-					.length}{/if}
-		</span>
-		{#if data.results.length > 5}
-			<button class="viewall" onclick={() => (expanded = !expanded)}>
-				{expanded ? 'Show less ▴' : 'View all ▾'}
-			</button>
-		{/if}
-	</div>
-	<div class="stack">
-		{#each shownResults as res (res.gameId)}
+	<ExpandableList items={data.results} key={(res) => res.gameId} gap="0.7rem">
+		{#snippet row(res)}
 			<div class="card result">
 				{#if res.status === 'void'}
 					<span class="muted"
@@ -312,8 +238,8 @@
 					</div>
 				{/if}
 			</div>
-		{/each}
-	</div>
+		{/snippet}
+	</ExpandableList>
 {/if}
 
 {#if !data.openRounds.length && !data.votedRounds.length && !data.results.length}
@@ -360,37 +286,6 @@
 		color: var(--muted);
 	}
 
-	/* ---- "view all" header for the results feed (mirrors the player page log) ---- */
-	.games-head {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		margin: -0.4rem 0 0.7rem;
-	}
-	.rescount {
-		font-size: 0.78rem;
-		color: var(--onmat-muted);
-		font-weight: 700;
-	}
-	.viewall {
-		font-family: var(--display);
-		font-size: 0.75rem;
-		font-weight: 800;
-		cursor: pointer;
-		border: none;
-		background: rgba(0, 0, 0, 0.24);
-		color: var(--onmat-muted);
-		border-radius: 999px;
-		padding: 0.3rem 0.7rem;
-		transition:
-			background 0.15s ease,
-			color 0.15s ease;
-	}
-	.viewall:hover {
-		background: rgba(255, 255, 255, 0.1);
-		color: var(--onmat);
-	}
-
 	/* ---- ballot card ---- */
 	.ballot {
 		display: flex;
@@ -434,50 +329,7 @@
 		border: 1.5px solid var(--edge);
 	}
 	.matchup {
-		display: flex;
-		align-items: center;
-		gap: 0.45rem;
-		flex-wrap: wrap;
 		margin-top: 0.65rem;
-	}
-	.teamgrp {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.25rem;
-		flex-wrap: wrap;
-		padding: 0.2rem 0.35rem;
-		border-radius: 9px;
-		border: 1.5px solid transparent;
-	}
-	.teamgrp.us {
-		background: rgba(15, 143, 106, 0.14);
-		border-color: rgba(15, 143, 106, 0.5);
-	}
-	.def {
-		font-family: var(--display);
-		font-size: 0.7rem;
-		font-weight: 800;
-		color: var(--muted);
-	}
-	.pchip {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.25rem;
-		font-size: 0.74rem;
-		font-weight: 700;
-		color: var(--ink);
-		background: var(--surface-2);
-		border-radius: 999px;
-		padding: 0.1rem 0.5rem 0.1rem 0.28rem;
-	}
-	.pchip .em {
-		font-size: 0.9rem;
-	}
-	.pchip.you {
-		background: var(--gold-2);
-		border: 1.5px solid var(--gold);
-		font-weight: 800;
-		padding: 0.1rem 0.5rem 0.1rem 0.24rem;
 	}
 	.divider {
 		height: 1px;
@@ -581,43 +433,12 @@
 		color: var(--muted);
 		font-weight: 700;
 	}
-	/* ✓ badge on the chip of a player who has already voted. */
-	.pchip.voted {
-		border: 1.5px solid var(--up);
-		padding-right: 0.32rem;
-	}
-	.vcheck {
-		display: inline-grid;
-		place-items: center;
-		width: 15px;
-		height: 15px;
-		border-radius: 50%;
-		background: var(--up);
-		color: #fff;
-		font-size: 10px;
-		font-weight: 900;
-		line-height: 1;
-		margin-left: 0.05rem;
-	}
 	/* In-flight vote: the button becomes a spinner + "Casting…" and disables. */
 	.btn {
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
 		gap: 0.5rem;
-	}
-	.spin {
-		width: 15px;
-		height: 15px;
-		border-radius: 50%;
-		border: 2.5px solid rgba(255, 255, 255, 0.4);
-		border-top-color: #fff;
-		animation: spin 0.7s linear infinite;
-	}
-	@keyframes spin {
-		to {
-			transform: rotate(360deg);
-		}
 	}
 	.err {
 		color: var(--danger);

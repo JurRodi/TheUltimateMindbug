@@ -1,7 +1,15 @@
 <script lang="ts">
 	import RatingChart from '$lib/components/RatingChart.svelte';
 	import GameLogRow from '$lib/components/GameLogRow.svelte';
+	import Hero from '$lib/components/Hero.svelte';
+	import Stat from '$lib/components/Stat.svelte';
+	import AvatarTile from '$lib/components/AvatarTile.svelte';
+	import StreakChip from '$lib/components/StreakChip.svelte';
+	import BackLink from '$lib/components/BackLink.svelte';
+	import ExpandableList from '$lib/components/ExpandableList.svelte';
+	import ListRow from '$lib/components/ListRow.svelte';
 	import { resolve } from '$app/paths';
+	import { pct, medal, shortDate, STYLE_LABEL } from '$lib/format';
 	import type { Track } from '$lib/types';
 	let { data } = $props();
 
@@ -12,8 +20,6 @@
 		{ label: '3v3', color: 'var(--gold)', points: data.series['3v3'] }
 	]);
 	const cur = (pts: { rating: number }[]) => (pts.length ? pts[pts.length - 1].rating : '—');
-	const STYLE = { rotating: '🔀 Rotating', fixed: '🛡️ Fixed teams', knockout: '🥊 Knockout' };
-	const pct = (w: number) => `${Math.round(w * 100)}%`;
 
 	const tiles: { label: string; key: Track; cls: string }[] = [
 		{ label: 'Total', key: 'total', cls: 't1' },
@@ -23,57 +29,35 @@
 	];
 
 	const overall = $derived(data.stats.total);
-	const streakText = (s: number) => (s > 0 ? `W${s} 🔥` : s < 0 ? `L${-s}` : '–');
-
-	// Recent games: 5 by default, "View all" expands to the full history.
-	let expanded = $state(false);
-	const shown = $derived(expanded ? data.history : data.history.slice(0, 5));
 </script>
 
-<a class="backlink" href={resolve('/')}>← Leaderboard</a>
+<BackLink href={resolve('/')} label="Leaderboard" />
 
-<div class="card hero">
-	<div class="avatar">{data.avatar}</div>
-	<div class="hero-body">
-		<div class="hero-top">
-			<h1>{data.player.name}</h1>
-			{#if overall.games > 0}
-				<span class="chip {overall.streak > 0 ? 'w' : overall.streak < 0 ? 'l' : 'none'}">
-					{streakText(overall.streak)}
-				</span>
-			{/if}
-			{#if data.rank}<span class="rank">#{data.rank} of {data.rankTotal}</span>{/if}
-		</div>
-		<div class="statrow">
-			<div class="stat">
-				<span class="n">{cur(data.series.total)}</span><span class="l">Rating</span>
-			</div>
-			<div class="stat">
-				<span class="n">{overall.wins}–{overall.losses}</span><span class="l">Record</span>
-			</div>
-			<div class="stat">
-				<span class="n">{pct(overall.winRate)}</span><span class="l">Win rate</span>
-			</div>
-			<div class="stat"><span class="n">{overall.games}</span><span class="l">Games</span></div>
-			{#if overall.games > 0}
-				<div class="stat">
-					<span class="n up">{overall.longestWinStreak ? `W${overall.longestWinStreak}` : '–'}</span
-					><span class="l">Longest win</span>
-				</div>
-				<div class="stat">
-					<span class="n down"
-						>{overall.longestLossStreak ? `L${overall.longestLossStreak}` : '–'}</span
-					><span class="l">Longest loss</span>
-				</div>
-			{/if}
-			{#if data.mvps > 0}
-				<div class="stat mvp">
-					<span class="n">{data.mvps}</span><span class="l">MVPs</span>
-				</div>
-			{/if}
-		</div>
-	</div>
-</div>
+<Hero title={data.player.name} rank={data.rank ? `#${data.rank} of ${data.rankTotal}` : null}>
+	{#snippet art()}<AvatarTile emoji={data.avatar} />{/snippet}
+	{#snippet badges()}
+		{#if overall.games > 0}<StreakChip streak={overall.streak} />{/if}
+	{/snippet}
+	{#snippet stats()}
+		<Stat n={cur(data.series.total)} label="Rating" />
+		<Stat n="{overall.wins}–{overall.losses}" label="Record" />
+		<Stat n={pct(overall.winRate)} label="Win rate" />
+		<Stat n={overall.games} label="Games" />
+		{#if overall.games > 0}
+			<Stat
+				n={overall.longestWinStreak ? `W${overall.longestWinStreak}` : '–'}
+				label="Longest win"
+				tone="up"
+			/>
+			<Stat
+				n={overall.longestLossStreak ? `L${overall.longestLossStreak}` : '–'}
+				label="Longest loss"
+				tone="down"
+			/>
+		{/if}
+		{#if data.mvps > 0}<Stat n={data.mvps} label="MVPs" />{/if}
+	{/snippet}
+</Hero>
 
 <div class="tiles">
 	{#each tiles as { label, key, cls } (key)}
@@ -110,48 +94,45 @@
 			>
 		</div>
 		<div class="card ttile wide">
-			<span class="v">{tt.bestStyle ? STYLE[tt.bestStyle.style] : '—'}</span>
+			<span class="v">{tt.bestStyle ? STYLE_LABEL[tt.bestStyle.style] : '—'}</span>
 			<span class="k"
 				>Best style{#if tt.bestStyle}
 					· {tt.bestStyle.titles} title{tt.bestStyle.titles > 1 ? 's' : ''}{/if}</span
 			>
 		</div>
 	</div>
-	<div class="card tlist">
+	<div class="card list tlist">
 		{#each data.tournaments as t (t.id)}
-			<a class="trow" href={resolve('/tournaments/[id]', { id: String(t.id) })}>
-				<span class="pos p{t.position ?? 0}" class:live={t.status === 'live'}>
-					{t.position === 1
-						? '🥇'
-						: t.position === 2
-							? '🥈'
-							: t.position === 3
-								? '🥉'
-								: (t.position ?? '—')}
-					<small>{t.positionLabel}</small>
-				</span>
-				<span class="tmid">
-					<span class="tname">
-						{t.name}
-						{#if t.status === 'live'}<span class="chip livechip">LIVE</span>{/if}
-						{#if !t.ranked}<span class="chip">Unranked</span>{/if}
+			<ListRow href={resolve('/tournaments/[id]', { id: String(t.id) })}>
+				{#snippet icon()}
+					<span class="pos p{t.position ?? 0}" class:live={t.status === 'live'}>
+						{medal(t.position)}
+						<small>{t.positionLabel}</small>
 					</span>
-					<span class="tmeta">
-						{new Date(t.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} ·
-						{STYLE[t.style]} · {t.format}{#if t.teammates.length}
-							· with {t.teammates.map((m) => `${m.emoji} ${m.name}`).join(', ')}{/if}
+				{/snippet}
+				<span class="tname">
+					{t.name}
+					{#if t.status === 'live'}<span class="chip live">LIVE</span>{/if}
+					{#if !t.ranked}<span class="chip">Unranked</span>{/if}
+				</span>
+				<span class="tmeta">
+					{shortDate(t.createdAt)} · {STYLE_LABEL[t.style]} · {t.format}{#if t.teammates.length}
+						· with {t.teammates.map((m) => `${m.emoji} ${m.name}`).join(', ')}{/if}
+				</span>
+				{#snippet aside()}
+					<span class="trec">
+						<b>{t.wins}–{t.losses}</b>
+						{#if t.style === 'rotating'}<span class="tmeta"
+								>{t.points} pt{t.points === 1 ? '' : 's'}</span
+							>
+						{:else if t.elo !== null}<span
+								class="tmeta"
+								class:up={t.elo >= 0}
+								class:down={t.elo < 0}>{t.elo >= 0 ? '+' : ''}{t.elo} Elo</span
+							>{/if}
 					</span>
-				</span>
-				<span class="trec">
-					<b>{t.wins}–{t.losses}</b>
-					{#if t.style === 'rotating'}<span class="tmeta"
-							>{t.points} pt{t.points === 1 ? '' : 's'}</span
-						>
-					{:else if t.elo !== null}<span class="tmeta" class:up={t.elo >= 0} class:down={t.elo < 0}
-							>{t.elo >= 0 ? '+' : ''}{t.elo} Elo</span
-						>{/if}
-				</span>
-			</a>
+				{/snippet}
+			</ListRow>
 		{/each}
 	</div>
 {/if}
@@ -160,19 +141,8 @@
 {#if data.history.length === 0}
 	<p class="card">No games logged yet.</p>
 {:else}
-	<div class="games-head">
-		<span class="count">
-			{#if expanded}All {data.history.length} games{:else}Last {shown.length} of {data.history
-					.length}{/if}
-		</span>
-		{#if data.history.length > 5}
-			<button class="viewall" onclick={() => (expanded = !expanded)}>
-				{expanded ? 'Show less ▴' : 'View all ▾'}
-			</button>
-		{/if}
-	</div>
-	<div class="log">
-		{#each shown as g (g.gameId)}
+	<ExpandableList items={data.history} key={(g) => g.gameId} noun="games">
+		{#snippet row(g)}
 			<GameLogRow
 				won={g.won}
 				format={g.format}
@@ -185,99 +155,14 @@
 				valueText={g.ranked ? `${g.delta >= 0 ? '+' : ''}${g.delta}` : '±0'}
 				valueUp={g.delta >= 0}
 			/>
-		{/each}
-	</div>
+		{/snippet}
+	</ExpandableList>
 {/if}
 
 <style>
-	.backlink {
-		color: var(--teal);
-		text-decoration: none;
-		font-size: 0.85rem;
-		font-weight: 700;
-		transition: opacity 0.15s ease;
-	}
-	.backlink:hover {
-		text-decoration: underline;
-	}
 	h2 {
 		font-size: 1.05rem;
 		margin: 1.5rem 0 0.7rem;
-	}
-
-	/* Hero */
-	.hero {
-		display: flex;
-		gap: 1rem;
-		align-items: center;
-		margin-top: 0.6rem;
-	}
-	.avatar {
-		width: 88px;
-		height: 88px;
-		flex: 0 0 auto;
-		border-radius: 14px;
-		display: grid;
-		place-items: center;
-		font-size: 3rem;
-		border: 2px solid var(--edge);
-		background: linear-gradient(155deg, #edca66, #cf9a2c);
-		box-shadow: inset 0 2px 6px rgba(255, 255, 255, 0.35);
-	}
-	.hero-body {
-		min-width: 0;
-		flex: 1;
-	}
-	.hero-top {
-		display: flex;
-		align-items: center;
-		gap: 0.6rem;
-		flex-wrap: wrap;
-	}
-	.hero-top .rank {
-		margin-left: auto;
-	}
-	.hero h1 {
-		margin: 0;
-		color: var(--ink);
-	}
-	.rank {
-		color: var(--muted);
-		font-weight: 800;
-		font-size: 0.8rem;
-		font-variant-numeric: tabular-nums;
-	}
-	.statrow {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.4rem 0.9rem;
-		margin-top: 0.6rem;
-		align-items: center;
-	}
-	.stat {
-		display: flex;
-		flex-direction: column;
-		line-height: 1.1;
-	}
-	.stat .n {
-		font-family: var(--display);
-		font-weight: 800;
-		font-size: 1.15rem;
-		color: var(--ink);
-		font-variant-numeric: tabular-nums;
-	}
-	.stat .l {
-		font-size: 0.62rem;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
-		color: var(--muted);
-		font-weight: 800;
-	}
-	.n.up {
-		color: var(--up);
-	}
-	.n.down {
-		color: var(--down);
 	}
 
 	/* Track tiles: 2×2 on phones, 4-up on wider screens. */
@@ -337,42 +222,6 @@
 		padding: 1rem 0.9rem 0.8rem;
 	}
 
-	/* Recent games */
-	.games-head {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		margin-bottom: 0.2rem;
-	}
-	.count {
-		font-size: 0.78rem;
-		color: var(--onmat-muted);
-		font-weight: 700;
-	}
-	.viewall {
-		font-family: var(--display);
-		font-size: 0.75rem;
-		font-weight: 800;
-		cursor: pointer;
-		border: none;
-		background: var(--surface-2);
-		color: var(--muted);
-		border-radius: 999px;
-		padding: 0.3rem 0.7rem;
-		transition:
-			background 0.15s ease,
-			color 0.15s ease;
-	}
-	.viewall:hover {
-		background: #dcc79b;
-		color: var(--ink);
-	}
-	.log {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-		margin-top: 0.4rem;
-	}
 	.ttiles {
 		display: grid;
 		grid-template-columns: repeat(4, 1fr);
@@ -387,7 +236,7 @@
 		grid-column: span 2;
 	}
 	.ttile.gold {
-		background: linear-gradient(155deg, #edca66, #cf9a2c);
+		background: var(--gold-art);
 		border-color: #a8791f;
 	}
 	.ttile .v {
@@ -411,25 +260,6 @@
 	}
 	.tlist {
 		margin-top: 0.7rem;
-		padding: 0;
-		overflow: hidden;
-	}
-	.trow {
-		display: grid;
-		grid-template-columns: 52px 1fr auto;
-		gap: 0.7rem;
-		align-items: center;
-		padding: 0.6rem 0.8rem;
-		border-top: 1px solid var(--line-card);
-		color: var(--ink);
-		text-decoration: none;
-		transition: background 0.14s ease;
-	}
-	.trow:first-child {
-		border-top: 0;
-	}
-	.trow:hover {
-		background: rgba(0, 0, 0, 0.04);
 	}
 	.pos {
 		width: 52px;
@@ -450,7 +280,7 @@
 		color: var(--muted);
 	}
 	.pos.p1 {
-		background: linear-gradient(155deg, #edca66, #cf9a2c);
+		background: var(--gold-art);
 		border-color: #a8791f;
 	}
 	.pos.p2 {
@@ -464,20 +294,12 @@
 	.pos.live {
 		border-color: var(--teal);
 	}
-	.tmid {
-		display: grid;
-		min-width: 0;
-	}
 	.tname {
 		font-weight: 800;
 	}
 	.tmeta {
 		font-size: 0.78rem;
 		color: var(--muted);
-	}
-	.chip.livechip {
-		background: var(--teal);
-		color: #fff;
 	}
 	.trec {
 		text-align: right;

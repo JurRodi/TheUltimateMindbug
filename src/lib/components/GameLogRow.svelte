@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Matchup from './Matchup.svelte';
 	import GameTags from './GameTags.svelte';
+	import { shortDate } from '$lib/format';
 
 	type Member = { id: number; name: string; emoji: string };
 	let {
@@ -31,16 +32,13 @@
 		/** Set when the game belongs to a tournament: shows a link to it. */
 		tournament?: { id: number; name: string; round: number } | null;
 	} = $props();
-
-	const fmtDate = (iso: string) =>
-		new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 </script>
 
 <div class="card row">
 	<div class="res {won ? 'w' : 'l'}">{won ? 'W' : 'L'}</div>
 	<div class="mid">
 		<div class="line1">
-			<GameTags {format} date={fmtDate(playedAt)} {ranked} {tournament} />
+			<GameTags {format} date={shortDate(playedAt)} {ranked} {tournament} />
 		</div>
 		<!-- The winning team is highlighted: green when "us" won, red around the
 		     opponents when "us" lost. -->

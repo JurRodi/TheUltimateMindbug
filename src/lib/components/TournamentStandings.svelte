@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+	import { medal, pct } from '$lib/format';
 	type Member = { id: number; name: string; emoji: string };
 	type Row = {
 		key: string;
@@ -12,9 +13,6 @@
 		winRate: number;
 	};
 	let { rows, style }: { rows: Row[]; style: 'rotating' | 'fixed' } = $props();
-	const medal = (p: number | null) =>
-		p === 1 ? '🥇' : p === 2 ? '🥈' : p === 3 ? '🥉' : (p ?? '—');
-	const pct = (w: number) => `${Math.round(w * 100)}%`;
 </script>
 
 <div class="card tbl">

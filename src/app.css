@@ -25,6 +25,8 @@
 	--onmat-muted: #9fd0ca;
 	/* misc */
 	--gold-grad: linear-gradient(160deg, #ecc25a, #dfa528);
+	/* avatar frames, champion / 1st-place highlights */
+	--gold-art: linear-gradient(155deg, #edca66, #cf9a2c);
 	/* primary action (save / add / unlock) — a positive green, replaces coral */
 	--go: #16a37b;
 	--go-grad: linear-gradient(160deg, #1fbf8f, #0f8f6a);
@@ -114,6 +116,15 @@ a {
 	background: #e7d6ad;
 	color: var(--muted);
 }
+.btn.danger {
+	background: linear-gradient(160deg, #e5604a, #c23b28);
+	color: #fff;
+}
+/* quieter destructive action (sign out, disable a flag) */
+.btn.danger-soft {
+	background: #f6ddd4;
+	color: #b63d28;
+}
 .btn:disabled {
 	opacity: 0.5;
 	cursor: not-allowed;
@@ -144,6 +155,16 @@ a {
 .chip.mvp {
 	background: #f7e3a0;
 	color: #8a6414;
+}
+.chip.live {
+	background: var(--coral);
+	color: #fff;
+}
+
+/* card holding edge-to-edge rows (see ListRow) */
+.card.list {
+	padding: 0;
+	overflow: hidden;
 }
 
 /* board aside: champion / this-week / legend info cards (on the dark mat) */
@@ -247,7 +268,7 @@ a {
 	border: 1.5px solid var(--edge);
 }
 .art.gold {
-	background: linear-gradient(155deg, #edca66, #cf9a2c);
+	background: var(--gold-art);
 }
 
 /* content width + bottom padding for the fixed mobile nav */
@@ -294,6 +315,10 @@ a {
 .btn.secondary:hover {
 	filter: none;
 	background: #dcc79b;
+}
+.btn.danger-soft:hover {
+	filter: none;
+	background: #f0cabd;
 }
 /* Disabled buttons never react to hover. */
 .btn:disabled,

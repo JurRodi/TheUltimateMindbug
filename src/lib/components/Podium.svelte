@@ -95,7 +95,7 @@
 		min-height: 32px;
 	}
 	.bart.gold {
-		background: linear-gradient(155deg, #edca66, #cf9a2c);
+		background: var(--gold-art);
 	}
 	.bn {
 		font-weight: 800;

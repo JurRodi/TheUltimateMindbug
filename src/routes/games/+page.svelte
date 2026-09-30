@@ -1,27 +1,13 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
-	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import Toast from '$lib/components/Toast.svelte';
 	import Matchup from '$lib/components/Matchup.svelte';
 	import GameTags from '$lib/components/GameTags.svelte';
+	import Segmented from '$lib/components/Segmented.svelte';
+	import ConfirmAction from '$lib/components/ConfirmAction.svelte';
+	import { fullDate, dateTime } from '$lib/format';
 	let { data } = $props();
-
-	let confirmingId = $state<number | null>(null);
-	let deletingId = $state<number | null>(null);
-	let toast = $state<string | null>(null);
-
-	const fmtDate = (iso: string) =>
-		new Date(iso).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' });
-	const fmtDateTime = (iso: string) =>
-		new Date(iso).toLocaleString('nl-NL', {
-			day: 'numeric',
-			month: 'short',
-			year: 'numeric',
-			hour: '2-digit',
-			minute: '2-digit'
-		});
 
 	const presets = [
 		{ v: 'all', l: 'All' },
@@ -72,14 +58,8 @@
 	<p class="sub">Every game logged, newest first.</p>
 {/if}
 
-{#if toast}<Toast message={toast} ondone={() => (toast = null)} />{/if}
-
 <div class="filters">
-	<div class="segset">
-		{#each presets as o (o.v)}
-			<button class:on={data.range === o.v} onclick={() => selectPreset(o.v)}>{o.l}</button>
-		{/each}
-	</div>
+	<Segmented options={presets} value={data.range} tone="mat" onselect={selectPreset} />
 	<div class="range">
 		<label>From <input type="date" bind:value={customFrom} onchange={applyCustom} /></label>
 		<label>To <input type="date" bind:value={customTo} onchange={applyCustom} /></label>
@@ -99,14 +79,14 @@
 					<div class="line1">
 						<GameTags
 							format={g.format}
-							date={fmtDate(g.playedAt)}
+							date={fullDate(g.playedAt)}
 							ranked={g.ranked}
 							tournament={g.tournament}
 						/>
 						{#if data.isAdmin}
 							<span class="audit">
 								Entered by {g.enteredBy ?? 'unknown'}{#if g.createdAt}
-									· {fmtDateTime(g.createdAt)}{/if}
+									· {dateTime(g.createdAt)}{/if}
 							</span>
 						{/if}
 					</div>
@@ -116,35 +96,14 @@
 				</div>
 				{#if data.isAdmin && !g.tournament}
 					<div class="actions">
-						{#if confirmingId === g.id}
-							<form
-								method="POST"
-								action="?/delete"
-								use:enhance={() => {
-									deletingId = g.id;
-									return async ({ result, update }) => {
-										await update();
-										deletingId = null;
-										confirmingId = null;
-										if (result.type === 'success') toast = 'Game deleted ✓';
-									};
-								}}
-							>
-								<input type="hidden" name="id" value={g.id} />
-								<span class="q">Delete?</span>
-								<button class="btn danger" type="submit" disabled={deletingId === g.id}>
-									{#if deletingId === g.id}<span class="spin" aria-hidden="true"
-										></span>{:else}Yes{/if}
-								</button>
-								<button class="btn secondary" type="button" onclick={() => (confirmingId = null)}
-									>Cancel</button
-								>
-							</form>
-						{:else}
-							<button class="btn secondary" type="button" onclick={() => (confirmingId = g.id)}
-								>🗑 Delete</button
-							>
-						{/if}
+						<ConfirmAction
+							action="?/delete"
+							label="🗑 Delete"
+							question="Delete?"
+							success="Game deleted ✓"
+						>
+							<input type="hidden" name="id" value={g.id} />
+						</ConfirmAction>
 					</div>
 				{/if}
 			</div>
@@ -200,20 +159,6 @@
 		font-size: 0.68rem;
 		font-weight: 700;
 		color: var(--muted);
-	}
-	.actions form {
-		display: flex;
-		align-items: center;
-		gap: 0.4rem;
-	}
-	.q {
-		font-size: 0.78rem;
-		font-weight: 800;
-		color: var(--ink);
-	}
-	.btn.danger {
-		background: linear-gradient(160deg, #e5604a, #c23b28);
-		color: #fff;
 	}
 	.filters {
 		display: flex;

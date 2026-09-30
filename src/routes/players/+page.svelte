@@ -2,13 +2,14 @@
 	import { enhance } from '$app/forms';
 	import { SvelteSet, SvelteMap } from 'svelte/reactivity';
 	import { CREATURES, creatureFor } from '$lib/creatures';
-	import Toast from '$lib/components/Toast.svelte';
+	import { track } from '$lib/enhance';
+	import AvatarTile from '$lib/components/AvatarTile.svelte';
+	import AvatarPicker from '$lib/components/AvatarPicker.svelte';
 	let { data, form } = $props();
 	let avatar = $state(CREATURES[0]);
 
 	let addingSubmitting = $state(false);
 	let togglingId = $state<number | null>(null);
-	let toast = $state<string | null>(null);
 
 	// Which players have their manage panel expanded. Several may be open at once
 	// so opening one player never discards an unsaved edit in another.
@@ -24,23 +25,17 @@
 
 <h1>Players</h1>
 
-{#if toast}<Toast message={toast} ondone={() => (toast = null)} />{/if}
-
 <form
 	method="POST"
 	action="?/add"
-	use:enhance={() => {
-		addingSubmitting = true;
-		return async ({ result, update }) => {
-			await update();
-			addingSubmitting = false;
-			if (result.type === 'success') toast = 'Player added ✓';
-		};
-	}}
+	use:enhance={track({
+		pending: (on) => (addingSubmitting = on),
+		success: 'Player added ✓'
+	})}
 	class="card add"
 >
 	<div class="head">
-		<span class="crea">{avatar}</span>
+		<AvatarTile emoji={avatar} size={37} />
 		<span class="grow">New player</span>
 	</div>
 	<div class="inputs">
@@ -48,11 +43,7 @@
 		<input name="email" type="email" placeholder="Google email (optional)" autocomplete="off" />
 	</div>
 	<input type="hidden" name="avatar" value={avatar} />
-	<div class="picker">
-		{#each CREATURES as c (c)}
-			<button type="button" class:on={avatar === c} onclick={() => (avatar = c)}>{c}</button>
-		{/each}
-	</div>
+	<AvatarPicker bind:value={avatar} />
 	<div class="actions">
 		<button class="btn" type="submit" disabled={addingSubmitting}>
 			{#if addingSubmitting}<span class="spin" aria-hidden="true"></span> Adding…{:else}Add player{/if}
@@ -70,7 +61,7 @@
 				aria-expanded={open.has(p.id)}
 				onclick={() => toggleManage(p.id)}
 			>
-				<span class="crea">{creatureFor(p.id, p.avatar)}</span>
+				<AvatarTile emoji={creatureFor(p.id, p.avatar)} size={37} />
 				<span class="name" class:inactive={!p.isActive}>{p.name}</span>
 				<span class="tags">
 					{#if !p.isActive}<span class="chip off">Inactive</span>{/if}
@@ -86,14 +77,11 @@
 						id="profile-{p.id}"
 						method="POST"
 						action="?/saveProfile"
-						use:enhance={() => {
-							return async ({ result, update }) => {
-								// reset:false keeps the typed name/email in the inputs after a
-								// save instead of clearing them back to blank.
-								await update({ reset: false });
-								if (result.type === 'success') toast = 'Profile updated ✓';
-							};
-						}}
+						use:enhance={track({
+							success: 'Profile updated ✓',
+							// Keep the typed name/email in the inputs after a save.
+							reset: false
+						})}
 						class="fieldrow"
 					>
 						<input type="hidden" name="id" value={p.id} />
@@ -102,15 +90,7 @@
 						<label for="name-{p.id}">Name</label>
 						<input id="name-{p.id}" name="name" value={p.name} maxlength="40" />
 
-						<div class="picker">
-							{#each CREATURES as c (c)}
-								<button
-									type="button"
-									class:on={avatarFor(p) === c}
-									onclick={() => chosen.set(p.id, c)}>{c}</button
-								>
-							{/each}
-						</div>
+						<AvatarPicker bind:value={() => avatarFor(p), (c) => chosen.set(p.id, c)} />
 
 						<label for="email-{p.id}">Google login email</label>
 						<input
@@ -126,16 +106,10 @@
 						<form
 							method="POST"
 							action="?/toggle"
-							use:enhance={() => {
-								const wasActive = p.isActive;
-								togglingId = p.id;
-								return async ({ result, update }) => {
-									await update();
-									togglingId = null;
-									if (result.type === 'success')
-										toast = wasActive ? 'Player deactivated' : 'Player activated';
-								};
-							}}
+							use:enhance={track({
+								pending: (on) => (togglingId = on ? p.id : null),
+								success: () => (p.isActive ? 'Player deactivated' : 'Player activated')
+							})}
 						>
 							<input type="hidden" name="id" value={p.id} />
 							<input type="hidden" name="active" value={(!p.isActive).toString()} />
@@ -148,8 +122,9 @@
 						<form
 							method="POST"
 							action="?/setAdmin"
-							use:enhance
-							onsubmit={() => (toast = p.isAdmin ? 'Admin removed' : 'Admin granted')}
+							use:enhance={track({
+								success: () => (p.isAdmin ? 'Admin removed' : 'Admin granted')
+							})}
 						>
 							<input type="hidden" name="id" value={p.id} />
 							<input type="hidden" name="isAdmin" value={(!p.isAdmin).toString()} />
@@ -167,19 +142,6 @@
 </ul>
 
 <style>
-	.crea {
-		display: grid;
-		place-items: center;
-		width: 2.3rem;
-		height: 2.3rem;
-		flex: none;
-		border-radius: 9px;
-		font-size: 1.25rem;
-		background: linear-gradient(155deg, #edca66, #cf9a2c);
-		border: 1.5px solid var(--edge);
-		box-shadow: inset 0 1px 3px rgba(255, 255, 255, 0.4);
-	}
-
 	/* ---- Add form: inputs stack (and never overflow), controls get own rows ---- */
 	.add {
 		display: grid;
@@ -215,30 +177,6 @@
 		border: 2px solid var(--surface-2);
 		background: var(--bg);
 		color: var(--ink);
-	}
-	.picker {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.25rem;
-	}
-	.picker button {
-		font-size: 1.1rem;
-		border: 1.5px solid var(--surface-2);
-		background: var(--bg);
-		border-radius: 9px;
-		padding: 0.2rem 0.35rem;
-		cursor: pointer;
-		transition:
-			border-color 0.15s ease,
-			transform 0.1s ease;
-	}
-	.picker button:not(.on):hover {
-		border-color: var(--edge);
-		transform: translateY(-1px);
-	}
-	.picker button.on {
-		border-color: var(--teal);
-		background: #d7efe0;
 	}
 	.add .actions {
 		display: flex;

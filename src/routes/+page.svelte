@@ -2,8 +2,9 @@
 	import BoardFilters from '$lib/components/BoardFilters.svelte';
 	import Podium from '$lib/components/Podium.svelte';
 	import CreatureTile from '$lib/components/CreatureTile.svelte';
-	import Toast from '$lib/components/Toast.svelte';
 	import { creatureFor } from '$lib/creatures';
+	import { pct, streakText, streakTone } from '$lib/format';
+	import { showToast } from '$lib/toast.svelte';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { replaceState } from '$app/navigation';
@@ -11,10 +12,9 @@
 
 	// Success confirmation after logging a game (the log form redirects here with
 	// ?saved=game). Show a toast once, then strip the param so a refresh is clean.
-	let toast = $state<string | null>(null);
 	$effect(() => {
 		if (page.url.searchParams.get('saved') === 'game') {
-			toast = 'Game saved ✓';
+			showToast('Game saved ✓');
 			const u = new URL(page.url);
 			u.searchParams.delete('saved');
 			const rest = u.searchParams.toString();
@@ -22,13 +22,7 @@
 		}
 	});
 
-	const pct = (w: number) => `${Math.round(w * 100)}%`;
-	const streakChip = (s: number) =>
-		s > 0
-			? { text: `W${s}`, tone: 'w' as const }
-			: s < 0
-				? { text: `L${-s}`, tone: 'l' as const }
-				: { text: '–', tone: 'none' as const };
+	const streakChip = (s: number) => ({ text: streakText(s), tone: streakTone(s) });
 	const titleChips = (n: number) => (n > 0 ? [{ text: `🏆 ${n}`, tone: 'mvp' as const }] : []);
 	const mvpChips = (n: number) => (n > 0 ? [{ text: `${n} MVP`, tone: 'mvp' as const }] : []);
 	// Win% chip: green above 50%, red below, neutral at exactly 50% (or no games).
@@ -85,7 +79,6 @@
 
 	// Aside cards.
 	const champ = $derived(data.rows[0] ?? null);
-	const champStreak = (s: number) => (s > 0 ? `W${s}` : s < 0 ? `L${-s}` : '–');
 	const deltaText = (d: number) => (d > 0 ? `▲ ${d}` : d < 0 ? `▼ ${-d}` : '–');
 
 	// Collapsed-filter summary shown on mobile (the full controls live inside the
@@ -98,8 +91,6 @@
 		].join(' · ')
 	);
 </script>
-
-{#if toast}<Toast message={toast} ondone={() => (toast = null)} />{/if}
 
 <div class="title">
 	<h1>The Ultimate Mindbug</h1>
@@ -241,7 +232,7 @@
 						<div class="row">
 							<span>rating</span><span>{champ.rated ? champ.rating : '—'}</span>
 						</div>
-						<div class="row"><span>streak</span><span>{champStreak(champ.streak)}</span></div>
+						<div class="row"><span>streak</span><span>{streakText(champ.streak)}</span></div>
 						{#if data.flags.mvp}
 							<div class="row"><span>MVPs</span><span>{champ.mvps}</span></div>
 						{/if}

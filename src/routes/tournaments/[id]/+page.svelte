@@ -4,24 +4,17 @@
 	import TournamentMatchCard from '$lib/components/TournamentMatchCard.svelte';
 	import TournamentStandings from '$lib/components/TournamentStandings.svelte';
 	import KnockoutBracket from '$lib/components/KnockoutBracket.svelte';
+	import BackLink from '$lib/components/BackLink.svelte';
+	import ConfirmAction from '$lib/components/ConfirmAction.svelte';
+	import { track } from '$lib/enhance';
+	import { dateTime, STYLE_LABEL } from '$lib/format';
 	let { data, form } = $props();
 
-	const STYLE = { rotating: '🔀 Rotating', fixed: '🛡️ Fixed teams', knockout: '🥊 Knockout' };
 	const t = $derived(data.tournament);
-	const fmt = (iso: string) =>
-		new Date(iso).toLocaleString('en-GB', {
-			day: 'numeric',
-			month: 'short',
-			year: 'numeric',
-			hour: '2-digit',
-			minute: '2-digit'
-		});
 	const rounds = $derived([...new Set(data.matches.map((m) => m.round))].sort((a, b) => a - b));
 	const inRound = (r: number) => data.matches.filter((m) => m.round === r);
 	const champs = $derived(data.standings.filter((r) => r.position === 1));
 	let selectedId = $state<number | null>(null);
-	let confirming = $state<'abandon' | 'delete' | null>(null);
-	let working = $state(false);
 	let finishing = $state(false);
 	const roundState = (r: number) => {
 		const ms = inRound(r);
@@ -33,7 +26,7 @@
 	);
 </script>
 
-<a class="backlink" href={resolve('/tournaments')}>← Tournaments</a>
+<BackLink href={resolve('/tournaments')} label="Tournaments" />
 
 <div class="card hero">
 	<div class="top">
@@ -42,13 +35,13 @@
 			>{:else if t.status === 'abandoned'}<span class="chip">Abandoned</span>{/if}
 	</div>
 	<div class="chips">
-		<span class="chip">{STYLE[t.style]}</span><span class="chip">{t.format}</span>
+		<span class="chip">{STYLE_LABEL[t.style]}</span><span class="chip">{t.format}</span>
 		<span class="chip">{data.playerCount} players</span>
 		{#if t.tables > 1 && t.style !== 'knockout'}<span class="chip">{t.tables} tables</span>{/if}
 		<span class="chip">{t.ranked ? 'Ranked' : 'Unranked'}</span>
 	</div>
 	<p class="meta">
-		Started {fmt(t.createdAt)}{#if t.creatorName}
+		Started {dateTime(t.createdAt)}{#if t.creatorName}
 			· by {t.creatorName}{/if}
 	</p>
 	{#if t.status === 'live'}
@@ -110,59 +103,20 @@
 			<form
 				method="POST"
 				action="?/finish"
-				use:enhance={() => {
-					working = finishing = true;
-					return async ({ update }) => {
-						await update();
-						working = finishing = false;
-					};
-				}}
+				use:enhance={track({ pending: (on) => (finishing = on) })}
 			>
-				<button class="btn" type="submit" disabled={working}>
+				<button class="btn" type="submit" disabled={finishing}>
 					{#if finishing}<span class="spin" aria-hidden="true"></span> Finishing…{:else}🏁 Finish
 						tournament{/if}
 				</button>
 			</form>
 		{/if}
-		{#each [{ key: 'abandon', show: data.canManage, label: 'Abandon', cls: 'secondary' }, { key: 'delete', show: data.canDelete, label: '🗑 Delete', cls: 'danger' }] as const as a (a.key)}
-			{#if a.show}
-				{#if confirming === a.key}
-					<form
-						method="POST"
-						action="?/{a.key}"
-						class="sure"
-						use:enhance={() => {
-							working = true;
-							return async ({ update }) => {
-								await update();
-								working = false;
-								confirming = null;
-							};
-						}}
-					>
-						<span class="q">Sure?</span>
-						<button class="btn danger" type="submit" disabled={working}>Yes</button>
-						<button class="btn secondary" type="button" onclick={() => (confirming = null)}
-							>Cancel</button
-						>
-					</form>
-				{:else}
-					<button class="btn {a.cls}" type="button" onclick={() => (confirming = a.key)}
-						>{a.label}</button
-					>
-				{/if}
-			{/if}
-		{/each}
+		{#if data.canManage}<ConfirmAction action="?/abandon" label="Abandon" />{/if}
+		{#if data.canDelete}<ConfirmAction action="?/delete" label="🗑 Delete" variant="danger" />{/if}
 	</div>
 {/if}
 
 <style>
-	.backlink {
-		color: var(--teal);
-		text-decoration: none;
-		font-size: 0.85rem;
-		font-weight: 700;
-	}
 	h2 {
 		font-size: 1.05rem;
 		margin: 1.5rem 0 0.7rem;
@@ -185,10 +139,6 @@
 		flex-wrap: wrap;
 		gap: 0.3rem;
 		margin-top: 0.4rem;
-	}
-	.chip.live {
-		background: var(--coral);
-		color: #fff;
 	}
 	.chip.now {
 		background: var(--teal);
@@ -214,7 +164,7 @@
 	.champ {
 		margin-top: 0.8rem;
 		text-align: center;
-		background: linear-gradient(155deg, #edca66, #cf9a2c);
+		background: var(--gold-art);
 		border-color: #a8791f;
 		font-weight: 700;
 	}
@@ -242,20 +192,6 @@
 		justify-content: flex-end;
 		gap: 0.5rem;
 		margin-top: 1rem;
-	}
-	.btn.danger {
-		background: linear-gradient(160deg, #e5604a, #c23b28);
-		color: #fff;
-	}
-	.sure {
-		display: flex;
-		align-items: center;
-		gap: 0.4rem;
-	}
-	.q {
-		font-size: 0.78rem;
-		font-weight: 800;
-		color: var(--ink);
 	}
 	.err {
 		color: var(--coral);

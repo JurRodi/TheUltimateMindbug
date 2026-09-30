@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import PlayerSelect from '$lib/components/PlayerSelect.svelte';
+	import Segmented from '$lib/components/Segmented.svelte';
+	import SwitchField from '$lib/components/SwitchField.svelte';
+	import { track } from '$lib/enhance';
 	let { data, form } = $props();
 
 	let format = $state<'1v1' | '2v2' | '3v3'>('2v2');
@@ -28,30 +31,21 @@
 		sideA.slice(0, size).every((v) => v != null) && sideB.slice(0, size).every((v) => v != null)
 	);
 	let submitting = $state(false);
+	const formats = [
+		{ v: '1v1', l: '1v1' },
+		{ v: '2v2', l: '2v2' },
+		{ v: '3v3', l: '3v3' }
+	] as const;
 </script>
 
 <h1>Log a game</h1>
 
-<form
-	method="POST"
-	use:enhance={() => {
-		submitting = true;
-		return async ({ update }) => {
-			await update();
-			submitting = false;
-		};
-	}}
-	class="card"
->
+<form method="POST" use:enhance={track({ pending: (on) => (submitting = on) })} class="card">
 	<input type="hidden" name="format" value={format} />
 	<input type="hidden" name="winnerSide" value={winnerSide} />
 	<input type="hidden" name="ranked" value={String(ranked)} />
 
-	<div class="seg">
-		<button type="button" class:on={format === '1v1'} onclick={() => (format = '1v1')}>1v1</button>
-		<button type="button" class:on={format === '2v2'} onclick={() => (format = '2v2')}>2v2</button>
-		<button type="button" class:on={format === '3v3'} onclick={() => (format = '3v3')}>3v3</button>
-	</div>
+	<Segmented options={formats} bind:value={format} center />
 
 	<div class="sides">
 		<div class="side" class:winner={winnerSide === 'A'}>
@@ -81,13 +75,11 @@
 		</div>
 	</div>
 
-	<label class="rankedfield">
-		<span>
-			<span class="dlbl">Ranked</span>
-			<span class="hint">Off = casual game: logged, but no Elo or stats impact</span>
-		</span>
-		<input type="checkbox" class="switch" bind:checked={ranked} />
-	</label>
+	<SwitchField
+		bind:checked={ranked}
+		label="Ranked"
+		hint="Off = casual game: logged, but no Elo or stats impact"
+	/>
 
 	<label class="datefield">
 		<span class="dlbl"
@@ -107,37 +99,6 @@
 		display: grid;
 		gap: 1.1rem;
 		margin-top: 1rem;
-	}
-	.seg {
-		display: flex;
-		gap: 0.25rem;
-		background: var(--surface-2);
-		border-radius: 999px;
-		padding: 0.25rem;
-		width: fit-content;
-		margin: 0 auto;
-	}
-	.seg button {
-		border: none;
-		background: transparent;
-		color: var(--muted);
-		font-family: var(--display);
-		font-weight: 800;
-		padding: 0.45rem 1.3rem;
-		border-radius: 999px;
-		cursor: pointer;
-		font-size: 0.9rem;
-		transition:
-			background 0.15s ease,
-			color 0.15s ease;
-	}
-	.seg button:not(.on):hover {
-		background: rgba(0, 0, 0, 0.06);
-		color: var(--ink);
-	}
-	.seg button.on {
-		background: var(--teal);
-		color: #fff;
 	}
 	.sides {
 		display: grid;
@@ -218,50 +179,11 @@
 	.wonbtn.won {
 		border-color: transparent;
 		color: #3a2a08;
-		background: linear-gradient(155deg, #edca66, #cf9a2c);
+		background: var(--gold-art);
 		box-shadow: 0 3px 0 rgba(0, 0, 0, 0.22);
 	}
 	.wonbtn.won:active {
 		transform: translateY(1px);
-	}
-	.rankedfield {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 1rem;
-	}
-	.rankedfield .hint {
-		display: block;
-		font-size: 0.78rem;
-		color: var(--muted);
-	}
-	.switch {
-		appearance: none;
-		width: 42px;
-		height: 24px;
-		border-radius: 999px;
-		background: var(--surface-2);
-		position: relative;
-		cursor: pointer;
-		flex: none;
-		transition: background 0.15s ease;
-	}
-	.switch::after {
-		content: '';
-		position: absolute;
-		top: 3px;
-		left: 3px;
-		width: 18px;
-		height: 18px;
-		border-radius: 50%;
-		background: #fff;
-		transition: transform 0.15s ease;
-	}
-	.switch:checked {
-		background: var(--teal);
-	}
-	.switch:checked::after {
-		transform: translateX(18px);
 	}
 	.datefield {
 		display: grid;

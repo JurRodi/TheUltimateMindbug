@@ -2,6 +2,10 @@
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
 	import { creatureFor } from '$lib/creatures';
+	import { track } from '$lib/enhance';
+	import BackLink from '$lib/components/BackLink.svelte';
+	import Segmented from '$lib/components/Segmented.svelte';
+	import SwitchField from '$lib/components/SwitchField.svelte';
 	import { validateSetup, maxTables, MAX_ROUNDS } from '$lib/tournament/validate';
 	import { generateSchedule } from '$lib/tournament/schedule';
 	import { randomSeed } from '$lib/tournament/rng';
@@ -41,6 +45,11 @@
 	let ranked = $state(true);
 	let seed = $state(randomSeed());
 	let submitting = $state(false);
+	const formats = [
+		{ v: '1v1', l: '1v1' },
+		{ v: '2v2', l: '2v2' },
+		{ v: '3v3', l: '3v3' }
+	] as const;
 
 	const byId = $derived(new Map(data.players.map((p) => [p.id, p])));
 	const label = (id: number) => {
@@ -72,20 +81,10 @@
 	const side = (ids: number[] | null) => (ids ? ids.map(label).join(' + ') : 'TBD');
 </script>
 
-<a class="backlink" href={resolve('/tournaments')}>← Tournaments</a>
+<BackLink href={resolve('/tournaments')} label="Tournaments" />
 <h1>New tournament</h1>
 
-<form
-	method="POST"
-	class="card"
-	use:enhance={() => {
-		submitting = true;
-		return async ({ update }) => {
-			await update();
-			submitting = false;
-		};
-	}}
->
+<form method="POST" class="card" use:enhance={track({ pending: (on) => (submitting = on) })}>
 	<input type="hidden" name="style" value={style} />
 	<input type="hidden" name="format" value={format} />
 	<input type="hidden" name="seed" value={seed} />
@@ -107,11 +106,7 @@
 	</div>
 
 	<div class="sec">Format</div>
-	<div class="seg">
-		{#each ['1v1', '2v2', '3v3'] as const as f (f)}
-			<button type="button" class:on={format === f} onclick={() => (format = f)}>{f}</button>
-		{/each}
-	</div>
+	<Segmented options={formats} bind:value={format} />
 
 	<div class="sec">Players <span class="count">({selected.length} selected)</span></div>
 	<div class="players">
@@ -141,10 +136,7 @@
 		>
 		<input class="num" type="number" min="1" max={cap} bind:value={tables} />
 	</label>
-	<label class="field">
-		<span><b>Ranked</b><span class="hint">Games count for Elo, board and stats</span></span>
-		<input type="checkbox" class="switch" bind:checked={ranked} />
-	</label>
+	<SwitchField bind:checked={ranked} label="Ranked" hint="Games count for Elo, board and stats" />
 
 	<div class="sec">Draw preview</div>
 	{#if !result.ok}
@@ -184,12 +176,6 @@
 </form>
 
 <style>
-	.backlink {
-		color: var(--teal);
-		text-decoration: none;
-		font-size: 0.85rem;
-		font-weight: 700;
-	}
 	form {
 		display: grid;
 		gap: 0.6rem;
@@ -245,38 +231,6 @@
 		border-color: var(--teal);
 		box-shadow: 0 0 0 2px var(--teal) inset;
 	}
-	/* On-card segmented control (same look as /log's format picker); the global
-	   .segset is styled for the dark mat. */
-	.seg {
-		display: flex;
-		gap: 0.25rem;
-		background: var(--surface-2);
-		border-radius: 999px;
-		padding: 0.25rem;
-		width: fit-content;
-	}
-	.seg button {
-		border: none;
-		background: transparent;
-		color: var(--muted);
-		font-family: var(--display);
-		font-weight: 800;
-		padding: 0.45rem 1.3rem;
-		border-radius: 999px;
-		cursor: pointer;
-		font-size: 0.9rem;
-		transition:
-			background 0.15s ease,
-			color 0.15s ease;
-	}
-	.seg button:not(.on):hover {
-		background: rgba(0, 0, 0, 0.06);
-		color: var(--ink);
-	}
-	.seg button.on {
-		background: var(--teal);
-		color: #fff;
-	}
 	.players {
 		display: flex;
 		flex-wrap: wrap;
@@ -308,33 +262,6 @@
 		display: block;
 		font-size: 0.78rem;
 		color: var(--muted);
-	}
-	.switch {
-		appearance: none;
-		width: 42px;
-		height: 24px;
-		border-radius: 999px;
-		background: var(--surface-2);
-		position: relative;
-		cursor: pointer;
-		flex: none;
-	}
-	.switch::after {
-		content: '';
-		position: absolute;
-		top: 3px;
-		left: 3px;
-		width: 18px;
-		height: 18px;
-		border-radius: 50%;
-		background: #fff;
-		transition: transform 0.15s ease;
-	}
-	.switch:checked {
-		background: var(--teal);
-	}
-	.switch:checked::after {
-		transform: translateX(18px);
 	}
 	.draw {
 		background: var(--surface);

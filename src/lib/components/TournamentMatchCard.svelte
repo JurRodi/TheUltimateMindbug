@@ -2,6 +2,7 @@
 	import { enhance } from '$app/forms';
 	import Matchup from './Matchup.svelte';
 	import PlayerChip from './PlayerChip.svelte';
+	import { track } from '$lib/enhance';
 
 	type Member = { id: number; name: string; emoji: string };
 	type Match = {
@@ -43,21 +44,8 @@
 	]);
 
 	let busy = $state(false);
-	const submit = () => {
-		busy = true;
-		return async ({
-			result,
-			update
-		}: {
-			result: { type: string };
-			update: () => Promise<void>;
-		}) => {
-			await update();
-			busy = false;
-			// Done: collapse the card (an error keeps it open next to the banner).
-			if (result.type === 'success') onselect();
-		};
-	};
+	// Done: collapse the card (an error keeps it open next to the banner).
+	const submit = track({ pending: (on) => (busy = on), onSuccess: () => onselect() });
 </script>
 
 <div class="m" class:open>

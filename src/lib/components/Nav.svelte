@@ -95,7 +95,7 @@
 		height: 1.7rem;
 		border-radius: 8px;
 		font-size: 0.95rem;
-		background: linear-gradient(155deg, #edca66, #cf9a2c);
+		background: var(--gold-art);
 		border: 1.5px solid var(--edge);
 		box-shadow: inset 0 1px 3px rgba(255, 255, 255, 0.4);
 	}
