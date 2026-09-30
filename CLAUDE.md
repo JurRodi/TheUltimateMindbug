@@ -28,11 +28,13 @@ is team-aware. Live app deployed on Vercel; see `README.md` for the concept.
   - `src/lib/rating/engine.ts` — the Elo engine.
   - `src/lib/stats/` — `aggregate.ts` (player stats + game log), `teams.ts`
     (team records + team game log / net-record series / streak), `summary.ts`.
-  - Server DB access in `src/lib/server/db/` (`schema.ts`, `queries.ts`); auth in
+  - `src/lib/tournament/` — pure draw / standings / summary logic.
+  - Server DB access in `src/lib/server/db/` (`schema.ts`, `queries.ts`,
+    `tournaments.ts`); auth in
     `src/lib/server/auth.ts`.
 - **Routes:** `/` board (Players/Teams views with format + date-range filters,
   sticky via a `mb_board` cookie), `/players`, `/players/[id]`, `/teams/[id]`
-  (team key = sorted player ids joined by `-`, e.g. `1-4`), `/log`, `/login`.
+  (team key = sorted player ids joined by `-`, e.g. `1-4`), `/log`, `/login`, `/tournaments` (+ `/new`, `/[id]`).
 - **Shared UI:** `src/lib/components/` — e.g. `GameLogRow.svelte` is used by both
   the player and team detail pages so their history can't drift.
 

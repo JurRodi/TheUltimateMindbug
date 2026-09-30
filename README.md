@@ -15,8 +15,11 @@ live web app (SvelteKit) deployed on Vercel, installable as a PWA.
 - **Win rate**, **all-time wins**, **games played**, and current **streak**.
 - **Teams** — every player pairing/trio's shared record, ranked by win% (teams
   have no Elo of their own).
+- **Tournaments** — rotating teams, fixed-teams round-robin or knockout, with a random seeded draw; ranked or casual. Titles show on the board and player pages.
 - **MVP voting** — after each game, players can vote for the game's MVP; results
   and reminders go out via web push notifications.
+
+Any game can be logged **unranked** (no Elo/stats impact).
 
 The board is **filterable** by format (2v2 / 3v3), by date range (today / week /
 month / all time), and split into **Players** and **Teams** views. Your last
@@ -43,6 +46,7 @@ only gains the team delta.
   players and emails here.
 - `/teams/[id]` — per-team detail (team key = sorted player ids, e.g. `1-4`).
 - `/log` — log a new game (sign-in required; the logging player is recorded).
+- `/tournaments`, `/tournaments/new`, `/tournaments/[id]` — tournament list, create (with draw preview), and detail (standings/bracket, schedule, result entry).
 - `/games` — full game history, newest first; admins can see who entered each
   game and when, and delete mistaken games.
 - `/mvp` — open MVP votes and recent MVP results.
