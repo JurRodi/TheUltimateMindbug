@@ -106,8 +106,18 @@
 {#if data.canManage || data.canDelete}
 	<div class="manage">
 		{#if data.canFinish}
-			<form method="POST" action="?/finish" use:enhance>
-				<button class="btn">🏁 Finish tournament</button>
+			<form
+				method="POST"
+				action="?/finish"
+				use:enhance={() => {
+					working = true;
+					return async ({ update }) => {
+						await update();
+						working = false;
+					};
+				}}
+			>
+				<button class="btn" type="submit" disabled={working}>🏁 Finish tournament</button>
 			</form>
 		{/if}
 		{#each [{ key: 'abandon', show: data.canManage, label: 'Abandon', cls: 'secondary' }, { key: 'delete', show: data.canDelete, label: '🗑 Delete', cls: 'danger' }] as const as a (a.key)}

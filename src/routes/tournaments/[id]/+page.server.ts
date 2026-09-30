@@ -14,7 +14,12 @@ import {
 	type ActionResult
 } from '$lib/server/db/tournaments';
 import { standings } from '$lib/tournament/standings';
-import { canChangeKnockoutResult, roundName, totalRounds } from '$lib/tournament/advance';
+import {
+	canChangeKnockoutResult,
+	knockoutRoundsOf,
+	roundName,
+	totalRounds
+} from '$lib/tournament/advance';
 import { progress } from '$lib/tournament/summary';
 import { creatureFor } from '$lib/creatures';
 import type { Actions, PageServerLoad } from './$types';
@@ -44,9 +49,16 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 	const actor = actorOf(locals);
 	const manage = canManage(t, actor);
 	const live = t.status === 'live';
-	const total = totalRounds(data.games);
-	const feederLabel = (round: number, slot: number) =>
-		`Winner of ${roundName(round - 1, total)} M${slot + 1}`;
+	// Knockout: from the roster, so an abandoned bracket (unplayed rounds
+	// deleted) keeps its round names.
+	const total = t.style === 'knockout' ? knockoutRoundsOf(data.roster) : totalRounds(data.games);
+	// The visible match number is the game's 1-based position among its
+	// round's existing games (byes have no game), not slot + 1.
+	const feederLabel = (round: number, slot: number) => {
+		const prev = data.games.filter((g) => g.round === round - 1);
+		const n = prev.findIndex((g) => g.slot === slot) + 1;
+		return `Winner of ${roundName(round - 1, total)} M${n}`;
+	};
 
 	const matches = data.games.map((g) => ({
 		id: g.id,

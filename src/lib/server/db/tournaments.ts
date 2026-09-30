@@ -2,7 +2,7 @@ import { eq, inArray, isNotNull, sql } from 'drizzle-orm';
 import { games, gameParticipants, tournaments, tournamentPlayers } from './schema';
 import type { DB } from './queries';
 import { generateSchedule } from '$lib/tournament/schedule';
-import { canChangeKnockoutResult, nextSlot, totalRounds } from '$lib/tournament/advance';
+import { canChangeKnockoutResult, knockoutRoundsOf, nextSlot } from '$lib/tournament/advance';
 import type {
 	RosterEntry,
 	TournamentData,
@@ -173,10 +173,20 @@ async function gameFor(
 	return { data, game };
 }
 
+/** WHERE fragments re-checked inside the write itself, so a stale read (the
+    tournament closed, or the next knockout match got played meanwhile) makes
+    the UPDATE match zero rows instead of corrupting the bracket. */
+function writeGuards(tournamentId: number, next: { id: number } | null) {
+	const live = sql`EXISTS (SELECT 1 FROM tournaments WHERE id = ${tournamentId} AND status = 'live')`;
+	return next
+		? sql`${live} AND NOT EXISTS (SELECT 1 FROM games WHERE id = ${next.id} AND winner_side IS NOT NULL)`
+		: live;
+}
+
 /** The knockout match a result feeds into, if any. */
 function feed(data: TournamentData, game: TournamentGame) {
 	if (data.tournament.style !== 'knockout') return null;
-	const next = nextSlot(game.round, game.slot, totalRounds(data.games));
+	const next = nextSlot(game.round, game.slot, knockoutRoundsOf(data.roster));
 	if (!next) return null;
 	const target = data.games.find((g) => g.round === next.round && g.slot === next.slot);
 	return target ? { id: target.id, side: next.side } : null;
@@ -208,9 +218,12 @@ export async function recordResult(
 
 	const winners = winner === 'A' ? game.sideA : game.sideB;
 	const next = feed(data, game);
-	// The guard makes a first entry atomic: if two people submit at once, only
-	// one UPDATE matches `winner_side IS NULL`; the other gets zero rows.
-	const guard = isChange ? sql`winner_side IS NOT NULL` : sql`winner_side IS NULL`;
+	// Compare-and-swap on the result we read: if two people submit at once, only
+	// one UPDATE matches; the other gets zero rows. A first entry also records
+	// who entered it (admins without a player keep the scheduling creator).
+	const guard = isChange ? sql`winner_side = ${game.winnerSide}::side` : sql`winner_side IS NULL`;
+	const enteredBy =
+		!isChange && actor.playerId !== null ? sql`, created_by = ${actor.playerId}` : sql``;
 	const advance = next
 		? sql`, del AS (
 				DELETE FROM game_participants
@@ -226,14 +239,19 @@ export async function recordResult(
 		: sql``;
 	const res = await db.execute(sql`
 		WITH upd AS (
-			UPDATE games SET winner_side = ${winner}::side, played_at = COALESCE(played_at, now())
+			UPDATE games SET winner_side = ${winner}::side, played_at = COALESCE(played_at, now())${enteredBy}
 			WHERE id = ${gameId} AND tournament_id = ${tournamentId} AND ${guard}
+				AND ${writeGuards(tournamentId, next)}
 			RETURNING id
 		)${advance}
 		SELECT id FROM upd
 	`);
 	if (rowsOf(res).length === 0)
-		return fail('Someone already entered this result — refresh the page');
+		return fail(
+			isChange
+				? 'This match changed — refresh the page'
+				: 'Someone already entered this result — refresh the page'
+		);
 	return OK;
 }
 
@@ -258,14 +276,16 @@ export async function clearResult(
 				WHERE game_id = ${next.id} AND side = ${next.side}::side AND EXISTS (SELECT 1 FROM upd)
 			)`
 		: sql``;
-	await db.execute(sql`
+	const res = await db.execute(sql`
 		WITH upd AS (
 			UPDATE games SET winner_side = NULL, played_at = NULL
 			WHERE id = ${gameId} AND tournament_id = ${tournamentId}
+				AND ${writeGuards(tournamentId, next)}
 			RETURNING id
 		)${unadvance}
 		SELECT id FROM upd
 	`);
+	if (rowsOf(res).length === 0) return fail('This match changed — refresh the page');
 	return OK;
 }
 

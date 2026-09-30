@@ -1,4 +1,4 @@
-import { totalRounds } from './advance';
+import { knockoutRounds } from './advance';
 import type { TournamentData, TournamentGame } from './types';
 
 export interface StandingRow {
@@ -56,7 +56,8 @@ function headToHead(u: Unit, group: Unit[], played: TournamentGame[]): number {
 
 export function standings(data: TournamentData): StandingRow[] {
 	const played = data.games.filter((g) => g.winnerSide !== null);
-	const rows = units(data).map((u) => {
+	const all = units(data);
+	const rows = all.map((u) => {
 		let wins = 0;
 		let losses = 0;
 		for (const g of played) {
@@ -88,9 +89,10 @@ export function standings(data: TournamentData): StandingRow[] {
 		winRate: r.winRate
 	});
 
-	// finalRound comes from ALL games (the bracket), not only played ones.
+	// finalRound comes from the team count (the bracket), not the games: an
+	// abandoned knockout has its unplayed later rounds deleted.
 	if (data.tournament.style === 'knockout')
-		return knockoutStandings(rows, played, totalRounds(data.games), toOut);
+		return knockoutStandings(rows, played, knockoutRounds(all.length), toOut);
 
 	const primary = (a: Row, b: Row) =>
 		data.tournament.style === 'rotating'

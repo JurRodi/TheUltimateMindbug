@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { makeTestDb } from './test-db';
-import { addPlayer, getAllGames, getGameHistory } from './queries';
+import { addPlayer, getAllGames, getGameHistory, getGamesMeta } from './queries';
 import {
 	createTournament,
 	getTournament,
@@ -146,6 +146,22 @@ describe('recordResult', () => {
 		});
 	});
 
+	it('records who entered the result as the game creator', async () => {
+		const id = await create();
+		const g = (await getTournament(db, id))!.games[0];
+		await recordResult(db, other, id, g.id, 'A');
+		const meta = (await getGamesMeta(db)).find((m) => m.id === g.id)!;
+		expect(meta.createdBy).toBe(other.playerId);
+	});
+
+	it('keeps the creator when an admin without a player enters the result', async () => {
+		const id = await create();
+		const g = (await getTournament(db, id))!.games[0];
+		await recordResult(db, admin, id, g.id, 'A');
+		const meta = (await getGamesMeta(db)).find((m) => m.id === g.id)!;
+		expect(meta.createdBy).toBe(ids[0]);
+	});
+
 	it('rejects a game from another tournament', async () => {
 		const a = await create();
 		const b = await create();
@@ -173,6 +189,21 @@ describe('clearResult', () => {
 		await clearResult(db, creator, id, semi0.id);
 		const final = (await getTournament(db, id))!.games.find((g) => g.round === 2)!;
 		expect(final.sideA).toEqual([]);
+	});
+
+	it('refuses to clear a semi-final whose final is already played', async () => {
+		const id = await create({ style: 'knockout', playerIds: ids, rounds: null });
+		let t = (await getTournament(db, id))!;
+		const semi0 = t.games.find((g) => g.round === 1 && g.slot === 0)!;
+		const semi1 = t.games.find((g) => g.round === 1 && g.slot === 1)!;
+		await recordResult(db, other, id, semi0.id, 'A');
+		await recordResult(db, other, id, semi1.id, 'A');
+		t = (await getTournament(db, id))!;
+		await recordResult(db, other, id, t.games.find((g) => g.round === 2)!.id, 'A');
+		expect((await clearResult(db, creator, id, semi0.id)).ok).toBe(false);
+		t = (await getTournament(db, id))!;
+		expect(t.games.find((g) => g.id === semi0.id)!.winnerSide).toBe('A');
+		expect(t.games.find((g) => g.round === 2)!.sideA).toEqual(semi0.sideA);
 	});
 });
 

@@ -114,4 +114,13 @@ describe('standings — knockout', () => {
 		expect(p['1']).toBeNull();
 		expect(p['3']).toBeNull();
 	});
+
+	it('keeps the bracket size when abandon removed the unplayed final', () => {
+		const data: TournamentData = {
+			tournament: { ...info('knockout'), status: 'abandoned' },
+			roster: [1, 2, 3, 4].map((playerId, i) => ({ playerId, teamNo: i + 1 })),
+			games: [game(1, 0, [1], [2], 'A'), game(1, 1, [3], [4], 'B')]
+		};
+		expect(pos(standings(data))).toEqual({ '1': null, '4': null, '2': 3, '3': 3 });
+	});
 });

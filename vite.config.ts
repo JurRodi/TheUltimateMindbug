@@ -29,6 +29,7 @@ export default defineConfig({
 					// apply every Drizzle migration; under parallel load that can exceed
 					// vitest's default 5s (e.g. the migration smoke test). Give them room.
 					testTimeout: 20000,
+					hookTimeout: 20000,
 					include: ['src/**/*.{test,spec}.{js,ts}'],
 					exclude: ['src/**/*.svelte.{test,spec}.{js,ts}']
 				}

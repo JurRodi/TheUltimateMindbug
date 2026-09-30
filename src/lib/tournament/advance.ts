@@ -1,5 +1,5 @@
 import type { Side } from '$lib/types';
-import type { TournamentGame } from './types';
+import type { RosterEntry, TournamentGame } from './types';
 
 /** Knockout wiring: (round r, slot i) feeds (r + 1, ⌊i / 2⌋) as side A when i
     is even, side B when odd. Null after the final. */
@@ -15,6 +15,16 @@ export function nextSlot(
 export function totalRounds(games: { round: number }[]): number {
 	return games.reduce((m, g) => Math.max(m, g.round), 0);
 }
+
+/** Rounds in a knockout bracket for `teamCount` teams. Derived from the
+    roster, not the games: abandoning deletes unplayed later rounds. */
+export function knockoutRounds(teamCount: number): number {
+	return Math.max(1, Math.ceil(Math.log2(teamCount)));
+}
+
+/** Knockout round count from the roster (one unit per team number). */
+export const knockoutRoundsOf = (roster: RosterEntry[]): number =>
+	knockoutRounds(new Set(roster.map((r) => r.teamNo)).size);
 
 /** A knockout result may change only while the match it feeds is unplayed. */
 export function canChangeKnockoutResult(games: TournamentGame[], game: TournamentGame): boolean {
