@@ -22,6 +22,7 @@
 	let selectedId = $state<number | null>(null);
 	let confirming = $state<'abandon' | 'delete' | null>(null);
 	let working = $state(false);
+	let finishing = $state(false);
 	const roundState = (r: number) => {
 		const ms = inRound(r);
 		if (ms.every((m) => m.winnerSide !== null)) return 'done';
@@ -110,14 +111,17 @@
 				method="POST"
 				action="?/finish"
 				use:enhance={() => {
-					working = true;
+					working = finishing = true;
 					return async ({ update }) => {
 						await update();
-						working = false;
+						working = finishing = false;
 					};
 				}}
 			>
-				<button class="btn" type="submit" disabled={working}>🏁 Finish tournament</button>
+				<button class="btn" type="submit" disabled={working}>
+					{#if finishing}<span class="spin" aria-hidden="true"></span> Finishing…{:else}🏁 Finish
+						tournament{/if}
+				</button>
 			</form>
 		{/if}
 		{#each [{ key: 'abandon', show: data.canManage, label: 'Abandon', cls: 'secondary' }, { key: 'delete', show: data.canDelete, label: '🗑 Delete', cls: 'danger' }] as const as a (a.key)}

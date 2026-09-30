@@ -68,25 +68,29 @@
 	.btn {
 		text-decoration: none;
 	}
+	/* Rows run edge to edge so the hover tint fills the card width (same
+	   hover as the Players tab roster rows). */
 	.list {
 		margin-top: 1rem;
-		padding: 0.3rem 0.9rem;
+		padding: 0;
+		overflow: hidden;
 	}
 	.row {
 		display: grid;
 		grid-template-columns: 44px 1fr auto;
 		gap: 0.7rem;
 		align-items: center;
-		padding: 0.7rem 0;
+		padding: 0.7rem 0.9rem;
 		color: var(--ink);
 		text-decoration: none;
 		border-top: 1px solid var(--line-card);
+		transition: background 0.14s ease;
 	}
 	.row:first-child {
 		border-top: 0;
 	}
-	.row:hover .name {
-		text-decoration: underline;
+	.row:hover {
+		background: rgba(0, 0, 0, 0.04);
 	}
 	.row.abandoned {
 		opacity: 0.55;

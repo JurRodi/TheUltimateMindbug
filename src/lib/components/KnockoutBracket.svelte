@@ -1,4 +1,6 @@
 <script lang="ts">
+	import PlayerChip from './PlayerChip.svelte';
+
 	type Member = { id: number; name: string; emoji: string };
 	type Match = {
 		id: number;
@@ -11,7 +13,6 @@
 		winnerSide: 'A' | 'B' | null;
 	};
 	let { matches, roundNames }: { matches: Match[]; roundNames: string[] } = $props();
-	const names = (ms: Member[]) => ms.map((m) => `${m.emoji} ${m.name}`).join(' + ');
 	const inRound = (r: number) =>
 		matches.filter((m) => m.round === r).sort((a, b) => a.slot - b.slot);
 </script>
@@ -23,12 +24,16 @@
 			<div class="games">
 				{#each inRound(i + 1) as m (m.id)}
 					<div class="bm">
-						<div class:w={m.winnerSide === 'A'} class:tbd={!!m.team1Label}>
-							{m.team1Label ?? names(m.team1)}
-						</div>
-						<div class:w={m.winnerSide === 'B'} class:tbd={!!m.team2Label}>
-							{m.team2Label ?? names(m.team2)}
-						</div>
+						{#each [{ side: 'A', members: m.team1, label: m.team1Label }, { side: 'B', members: m.team2, label: m.team2Label }] as t (t.side)}
+							<div
+								class="slot"
+								class:w={m.winnerSide === t.side}
+								class:l={m.winnerSide !== null && m.winnerSide !== t.side}
+							>
+								{#if t.label}<span class="tbd">{t.label}</span
+									>{:else}{#each t.members as p (p.id)}<PlayerChip {...p} />{/each}{/if}
+							</div>
+						{/each}
 					</div>
 				{/each}
 			</div>
@@ -69,15 +74,21 @@
 		font-size: 0.76rem;
 		overflow: hidden;
 	}
-	.bm div {
-		padding: 0.25rem 0.4rem;
+	.slot {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.2rem;
+		padding: 0.3rem 0.4rem;
 	}
-	.bm div + div {
+	.slot + .slot {
 		border-top: 1px solid var(--line-card);
 	}
-	.w {
-		background: #cfeee2;
-		font-weight: 800;
+	/* Same winner tint as the shared Matchup look. */
+	.slot.w {
+		background: rgba(15, 143, 106, 0.14);
+	}
+	.slot.l {
+		opacity: 0.6;
 	}
 	.tbd {
 		color: var(--muted);

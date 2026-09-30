@@ -23,6 +23,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const avatarById = new Map(players.map((p) => [p.id, p.avatar]));
 	const metaById = new Map(meta.map((m) => [m.id, m]));
 	const resolve = (id: number) => ({
+		id,
 		name: nameById.get(id) ?? `#${id}`,
 		emoji: creatureFor(id, avatarById.get(id))
 	});

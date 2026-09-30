@@ -4,6 +4,8 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import Toast from '$lib/components/Toast.svelte';
+	import Matchup from '$lib/components/Matchup.svelte';
+	import GameTags from '$lib/components/GameTags.svelte';
 	let { data } = $props();
 
 	let confirmingId = $state<number | null>(null);
@@ -95,13 +97,12 @@
 			<div class="card row">
 				<div class="mid">
 					<div class="line1">
-						<span class="fmt">{g.format}</span><span class="date">{fmtDate(g.playedAt)}</span>
-						{#if !g.ranked}<span class="fmt unr">Unranked</span>{/if}
-						{#if g.tournament}
-							<a class="tlink" href={resolve('/tournaments/[id]', { id: String(g.tournament.id) })}
-								>🏆 {g.tournament.name} · R{g.tournament.round}</a
-							>
-						{/if}
+						<GameTags
+							format={g.format}
+							date={fmtDate(g.playedAt)}
+							ranked={g.ranked}
+							tournament={g.tournament}
+						/>
 						{#if data.isAdmin}
 							<span class="audit">
 								Entered by {g.enteredBy ?? 'unknown'}{#if g.createdAt}
@@ -109,20 +110,8 @@
 							</span>
 						{/if}
 					</div>
-					<div class="teams">
-						<span class="side" class:win={g.winnerSide === 'A'}>
-							{#each g.sideA as p (p.name)}<span class="pl"
-									><span class="em">{p.emoji}</span>{p.name}</span
-								>{/each}
-						</span>
-						<span class="vs">vs</span>
-						<span class="side" class:win={g.winnerSide === 'B'}>
-							{#each g.sideB as p (p.name)}
-								<span class="pl">
-									<span class="em">{p.emoji}</span>{p.name}
-								</span>
-							{/each}
-						</span>
+					<div class="mu">
+						<Matchup teamA={g.sideA} teamB={g.sideB} winner={g.winnerSide} />
 					</div>
 				</div>
 				{#if data.isAdmin && !g.tournament}
@@ -204,67 +193,8 @@
 		gap: 0.4rem;
 		flex-wrap: wrap;
 	}
-	.fmt {
-		font-size: 0.62rem;
-		font-weight: 800;
-		letter-spacing: 0.05em;
-		padding: 0.08rem 0.4rem;
-		border-radius: 6px;
-		background: var(--surface-2);
-		color: var(--muted);
-	}
-	.fmt.unr {
-		background: #cbb98f;
-		color: #4a3d24;
-	}
-	.tlink {
-		font-size: 0.72rem;
-		font-weight: 800;
-		color: var(--teal);
-		text-decoration: none;
-	}
-	.tlink:hover {
-		text-decoration: underline;
-	}
-	.date {
-		font-size: 0.72rem;
-		color: var(--muted);
-		font-weight: 700;
-	}
-	.teams {
-		display: flex;
-		align-items: center;
-		gap: 0.4rem;
-		flex-wrap: wrap;
+	.mu {
 		margin-top: 0.3rem;
-	}
-	.side {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.3rem;
-		flex-wrap: wrap;
-		padding: 0.15rem 0.35rem;
-		border-radius: 9px;
-	}
-	.side.win {
-		background: rgba(15, 143, 106, 0.14);
-	}
-	.pl {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.2rem;
-		font-size: 0.78rem;
-		font-weight: 700;
-		color: var(--ink);
-	}
-	.pl .em {
-		font-size: 0.95rem;
-	}
-	.vs {
-		font-family: var(--display);
-		font-size: 0.7rem;
-		font-weight: 800;
-		color: var(--muted);
 	}
 	.audit {
 		font-size: 0.68rem;

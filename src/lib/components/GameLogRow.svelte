@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { resolve } from '$app/paths';
+	import Matchup from './Matchup.svelte';
+	import GameTags from './GameTags.svelte';
 
 	type Member = { id: number; name: string; emoji: string };
 	let {
@@ -11,9 +12,7 @@
 		youId = null,
 		valueText,
 		valueUp,
-		/** False = casual/unranked game: shows a badge. */
 		ranked = true,
-		/** Set when the game belongs to a tournament: shows a link to it. */
 		tournament = null
 	}: {
 		won: boolean;
@@ -27,7 +26,9 @@
 		/** Right-hand metric already formatted (e.g. "+12", "-3"). */
 		valueText: string;
 		valueUp: boolean;
+		/** False = casual/unranked game: shows a badge. */
 		ranked?: boolean;
+		/** Set when the game belongs to a tournament: shows a link to it. */
 		tournament?: { id: number; name: string; round: number } | null;
 	} = $props();
 
@@ -39,35 +40,12 @@
 	<div class="res {won ? 'w' : 'l'}">{won ? 'W' : 'L'}</div>
 	<div class="mid">
 		<div class="line1">
-			<span class="fmt">{format}</span><span class="date">{fmtDate(playedAt)}</span>
-			{#if !ranked}<span class="fmt unr">Unranked</span>{/if}
-			{#if tournament}
-				<a class="tlink" href={resolve('/tournaments/[id]', { id: String(tournament.id) })}
-					>🏆 {tournament.name} · R{tournament.round}</a
-				>
-			{/if}
+			<GameTags {format} date={fmtDate(playedAt)} {ranked} {tournament} />
 		</div>
-		<div class="teams">
-			<!-- The winning team is highlighted: green when "us" won, red around the
-			     opponents when "us" lost. -->
-			<span class="teamgrp {won ? 'win good' : ''}">
-				{#each us as p (p.id)}
-					<a
-						class="pchip"
-						class:you={youId !== null && p.id === youId}
-						href={resolve('/players/[id]', { id: String(p.id) })}
-						><span class="em">{p.emoji}</span>{p.name}</a
-					>
-				{/each}
-			</span>
-			<span class="vs">vs</span>
-			<span class="teamgrp {won ? '' : 'win bad'}">
-				{#each opponents as p (p.id)}
-					<a class="pchip" href={resolve('/players/[id]', { id: String(p.id) })}
-						><span class="em">{p.emoji}</span>{p.name}</a
-					>
-				{/each}
-			</span>
+		<!-- The winning team is highlighted: green when "us" won, red around the
+		     opponents when "us" lost. -->
+		<div class="mu">
+			<Matchup teamA={us} teamB={opponents} winner={won ? 'A' : 'B'} perspective {youId} />
 		</div>
 	</div>
 	<div class="val {valueUp ? 'up' : 'down'}">{valueText}</div>
@@ -109,107 +87,8 @@
 		gap: 0.4rem;
 		flex-wrap: wrap;
 	}
-	.fmt {
-		font-size: 0.62rem;
-		font-weight: 800;
-		letter-spacing: 0.05em;
-		padding: 0.08rem 0.4rem;
-		border-radius: 6px;
-		background: var(--surface-2);
-		color: var(--muted);
-	}
-	.fmt.unr {
-		background: #cbb98f;
-		color: #4a3d24;
-	}
-	.tlink {
-		font-size: 0.72rem;
-		font-weight: 800;
-		color: var(--teal);
-		text-decoration: none;
-	}
-	.tlink:hover {
-		text-decoration: underline;
-	}
-	.date {
-		font-size: 0.72rem;
-		color: var(--muted);
-		font-weight: 700;
-	}
-	.teams {
-		display: flex;
-		align-items: center;
-		gap: 0.4rem;
-		flex-wrap: wrap;
+	.mu {
 		margin-top: 0.3rem;
-	}
-	/* On phones, stack the teams so "vs" sits between them rather than trailing
-	   the first team when the row wraps. */
-	@media (max-width: 560px) {
-		.teams {
-			flex-direction: column;
-			align-items: flex-start;
-			flex-wrap: nowrap;
-			/* Shrink the column to the widest team group so the centered "vs"
-			   lines up over the chips, not the full-width grid cell. */
-			width: fit-content;
-		}
-		.teams .vs {
-			align-self: center;
-		}
-	}
-	.teamgrp {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.25rem;
-		flex-wrap: wrap;
-		padding: 0.2rem 0.3rem;
-		border-radius: 9px;
-		border: 1.5px solid transparent;
-	}
-	.teamgrp.win.good {
-		background: rgba(15, 143, 106, 0.14);
-		border-color: rgba(15, 143, 106, 0.5);
-	}
-	.teamgrp.win.bad {
-		background: rgba(214, 74, 55, 0.13);
-		border-color: rgba(214, 74, 55, 0.5);
-	}
-	.pchip {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.25rem;
-		font-size: 0.74rem;
-		font-weight: 700;
-		color: var(--ink);
-		text-decoration: none;
-		background: var(--surface-2);
-		border-radius: 999px;
-		padding: 0.1rem 0.5rem 0.1rem 0.28rem;
-		border: 1.5px solid transparent;
-		transition:
-			transform 0.12s ease,
-			filter 0.12s ease;
-	}
-	.pchip:hover {
-		transform: translateY(-1px);
-		filter: brightness(0.97);
-	}
-	.pchip .em {
-		font-size: 0.9rem;
-		line-height: 1;
-	}
-	.pchip.you {
-		background: var(--gold-2);
-		border-color: var(--gold);
-		font-weight: 800;
-	}
-	.vs {
-		font-family: var(--display);
-		font-size: 0.7rem;
-		font-weight: 800;
-		color: var(--muted);
-		letter-spacing: 0.05em;
 	}
 	.val {
 		font-family: var(--display);

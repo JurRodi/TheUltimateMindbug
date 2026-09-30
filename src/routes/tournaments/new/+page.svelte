@@ -107,7 +107,7 @@
 	</div>
 
 	<div class="sec">Format</div>
-	<div class="segset">
+	<div class="seg">
 		{#each ['1v1', '2v2', '3v3'] as const as f (f)}
 			<button type="button" class:on={format === f} onclick={() => (format = f)}>{f}</button>
 		{/each}
@@ -244,6 +244,38 @@
 	.style.on {
 		border-color: var(--teal);
 		box-shadow: 0 0 0 2px var(--teal) inset;
+	}
+	/* On-card segmented control (same look as /log's format picker); the global
+	   .segset is styled for the dark mat. */
+	.seg {
+		display: flex;
+		gap: 0.25rem;
+		background: var(--surface-2);
+		border-radius: 999px;
+		padding: 0.25rem;
+		width: fit-content;
+	}
+	.seg button {
+		border: none;
+		background: transparent;
+		color: var(--muted);
+		font-family: var(--display);
+		font-weight: 800;
+		padding: 0.45rem 1.3rem;
+		border-radius: 999px;
+		cursor: pointer;
+		font-size: 0.9rem;
+		transition:
+			background 0.15s ease,
+			color 0.15s ease;
+	}
+	.seg button:not(.on):hover {
+		background: rgba(0, 0, 0, 0.06);
+		color: var(--ink);
+	}
+	.seg button.on {
+		background: var(--teal);
+		color: #fff;
 	}
 	.players {
 		display: flex;

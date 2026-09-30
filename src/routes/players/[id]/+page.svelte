@@ -411,20 +411,25 @@
 	}
 	.tlist {
 		margin-top: 0.7rem;
-		padding: 0.2rem 0.8rem;
+		padding: 0;
+		overflow: hidden;
 	}
 	.trow {
 		display: grid;
 		grid-template-columns: 52px 1fr auto;
 		gap: 0.7rem;
 		align-items: center;
-		padding: 0.6rem 0;
+		padding: 0.6rem 0.8rem;
 		border-top: 1px solid var(--line-card);
 		color: var(--ink);
 		text-decoration: none;
+		transition: background 0.14s ease;
 	}
 	.trow:first-child {
 		border-top: 0;
+	}
+	.trow:hover {
+		background: rgba(0, 0, 0, 0.04);
 	}
 	.pos {
 		width: 52px;
