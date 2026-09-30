@@ -12,6 +12,7 @@
 		{ label: '3v3', color: 'var(--gold)', points: data.series['3v3'] }
 	]);
 	const cur = (pts: { rating: number }[]) => (pts.length ? pts[pts.length - 1].rating : '—');
+	const STYLE = { rotating: '🔀 Rotating', fixed: '🛡️ Fixed teams', knockout: '🥊 Knockout' };
 	const pct = (w: number) => `${Math.round(w * 100)}%`;
 
 	const tiles: { label: string; key: Track; cls: string }[] = [
@@ -90,6 +91,70 @@
 <div class="card chart-card">
 	<RatingChart series={chart} />
 </div>
+
+{#if data.tournaments.length}
+	{@const tt = data.tournamentTotals}
+	<h2>🏆 Tournaments</h2>
+	<div class="ttiles">
+		<div class="card ttile gold">
+			<span class="v">{tt.titles}</span><span class="k">Titles</span>
+		</div>
+		<div class="card ttile"><span class="v">{tt.podiums}</span><span class="k">Podiums</span></div>
+		<div class="card ttile"><span class="v">{tt.played}</span><span class="k">Played</span></div>
+		<div class="card ttile">
+			<span class="v">{tt.avgFinish ?? '—'}</span><span class="k">Avg finish</span>
+		</div>
+		<div class="card ttile wide">
+			<span class="v">{tt.wins}–{tt.losses}</span><span class="k"
+				>Tournament record · {pct(tt.winRate)}</span
+			>
+		</div>
+		<div class="card ttile wide">
+			<span class="v">{tt.bestStyle ? STYLE[tt.bestStyle.style] : '—'}</span>
+			<span class="k"
+				>Best style{#if tt.bestStyle}
+					· {tt.bestStyle.titles} title{tt.bestStyle.titles > 1 ? 's' : ''}{/if}</span
+			>
+		</div>
+	</div>
+	<div class="card tlist">
+		{#each data.tournaments as t (t.id)}
+			<a class="trow" href={resolve('/tournaments/[id]', { id: String(t.id) })}>
+				<span class="pos p{t.position ?? 0}" class:live={t.status === 'live'}>
+					{t.position === 1
+						? '🥇'
+						: t.position === 2
+							? '🥈'
+							: t.position === 3
+								? '🥉'
+								: (t.position ?? '—')}
+					<small>{t.positionLabel}</small>
+				</span>
+				<span class="tmid">
+					<span class="tname">
+						{t.name}
+						{#if t.status === 'live'}<span class="chip livechip">LIVE</span>{/if}
+						{#if !t.ranked}<span class="chip">Unranked</span>{/if}
+					</span>
+					<span class="tmeta">
+						{new Date(t.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} ·
+						{STYLE[t.style]} · {t.format}{#if t.teammates.length}
+							· with {t.teammates.map((m) => `${m.emoji} ${m.name}`).join(', ')}{/if}
+					</span>
+				</span>
+				<span class="trec">
+					<b>{t.wins}–{t.losses}</b>
+					{#if t.style === 'rotating'}<span class="tmeta"
+							>{t.points} pt{t.points === 1 ? '' : 's'}</span
+						>
+					{:else if t.elo !== null}<span class="tmeta" class:up={t.elo >= 0} class:down={t.elo < 0}
+							>{t.elo >= 0 ? '+' : ''}{t.elo} Elo</span
+						>{/if}
+				</span>
+			</a>
+		{/each}
+	</div>
+{/if}
 
 <h2>Recent games</h2>
 {#if data.history.length === 0}
@@ -307,5 +372,116 @@
 		flex-direction: column;
 		gap: 0.5rem;
 		margin-top: 0.4rem;
+	}
+	.ttiles {
+		display: grid;
+		grid-template-columns: repeat(4, 1fr);
+		gap: 0.5rem;
+	}
+	.ttile {
+		text-align: center;
+		padding: 0.6rem;
+		margin: 0;
+	}
+	.ttile.wide {
+		grid-column: span 2;
+	}
+	.ttile.gold {
+		background: linear-gradient(155deg, #edca66, #cf9a2c);
+		border-color: #a8791f;
+	}
+	.ttile .v {
+		display: block;
+		font-family: var(--display);
+		font-weight: 800;
+		font-size: 1.3rem;
+		color: var(--ink);
+	}
+	.ttile .k {
+		font-size: 0.66rem;
+		font-weight: 800;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		color: var(--muted);
+	}
+	@media (max-width: 560px) {
+		.ttiles {
+			grid-template-columns: repeat(2, 1fr);
+		}
+	}
+	.tlist {
+		margin-top: 0.7rem;
+		padding: 0.2rem 0.8rem;
+	}
+	.trow {
+		display: grid;
+		grid-template-columns: 52px 1fr auto;
+		gap: 0.7rem;
+		align-items: center;
+		padding: 0.6rem 0;
+		border-top: 1px solid var(--line-card);
+		color: var(--ink);
+		text-decoration: none;
+	}
+	.trow:first-child {
+		border-top: 0;
+	}
+	.pos {
+		width: 52px;
+		height: 52px;
+		border-radius: 12px;
+		display: grid;
+		place-items: center;
+		align-content: center;
+		font-family: var(--display);
+		font-weight: 800;
+		background: var(--surface);
+		border: 2px solid var(--line-card);
+		line-height: 1.05;
+	}
+	.pos small {
+		font-size: 0.58rem;
+		font-weight: 700;
+		color: var(--muted);
+	}
+	.pos.p1 {
+		background: linear-gradient(155deg, #edca66, #cf9a2c);
+		border-color: #a8791f;
+	}
+	.pos.p2 {
+		background: linear-gradient(155deg, #e9eef0, #b9c3c8);
+		border-color: #8f9aa0;
+	}
+	.pos.p3 {
+		background: linear-gradient(155deg, #e7b88a, #b87a45);
+		border-color: #8f5a2e;
+	}
+	.pos.live {
+		border-color: var(--teal);
+	}
+	.tmid {
+		display: grid;
+		min-width: 0;
+	}
+	.tname {
+		font-weight: 800;
+	}
+	.tmeta {
+		font-size: 0.78rem;
+		color: var(--muted);
+	}
+	.chip.livechip {
+		background: var(--teal);
+		color: #fff;
+	}
+	.trec {
+		text-align: right;
+		display: grid;
+	}
+	.up {
+		color: var(--up);
+	}
+	.down {
+		color: var(--down);
 	}
 </style>

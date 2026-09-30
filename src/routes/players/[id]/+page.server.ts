@@ -10,6 +10,8 @@ import {
 import { computeRatings } from '$lib/rating/engine';
 import { playerStats, playerGameLog } from '$lib/stats/aggregate';
 import { creatureFor } from '$lib/creatures';
+import { getTournaments } from '$lib/server/db/tournaments';
+import { playerTournaments, playerTournamentTotals } from '$lib/tournament/summary';
 import type { Track } from '$lib/types';
 import type { PageServerLoad } from './$types';
 
@@ -22,14 +24,21 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 	// Only add the MVP count query to the batch when the feature is on; the
 	// destructure default covers the disabled case (query absent from the batch).
 	const mvpCalls = locals.flags.mvp ? [getMvpCounts(db)] : [];
-	const [player, players, games, historyGames, mvpCounts = new Map<number, number>()] =
-		await Promise.all([
-			getPlayer(db, id),
-			getPlayers(db),
-			getAllGames(db),
-			getGameHistory(db),
-			...mvpCalls
-		]);
+	const [
+		player,
+		players,
+		games,
+		historyGames,
+		allTournaments,
+		mvpCounts = new Map<number, number>()
+	] = await Promise.all([
+		getPlayer(db, id),
+		getPlayers(db),
+		getAllGames(db),
+		getGameHistory(db),
+		getTournaments(db),
+		...mvpCalls
+	]);
 	if (!player) throw error(404, 'Player not found');
 
 	const ratings = computeRatings(games);
@@ -85,6 +94,28 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		};
 	});
 
+	const entries = playerTournaments(allTournaments, id);
+	const deltaOf = (gameIds: number[]) =>
+		Math.round(gameIds.reduce((s, gid) => s + (deltaByGame.get(gid) ?? 0), 0));
+	const tournaments = entries.map((e) => ({
+		id: e.tournament.id,
+		name: e.tournament.name,
+		style: e.tournament.style,
+		format: e.tournament.format,
+		ranked: e.tournament.ranked,
+		status: e.tournament.status,
+		createdAt: e.tournament.createdAt,
+		position: e.position,
+		positionLabel: e.positionLabel,
+		wins: e.wins,
+		losses: e.losses,
+		points: e.points,
+		teammates: e.teammateIds.map(resolve),
+		// Rotating shows points; team styles show net Elo (ranked only).
+		elo: e.tournament.style !== 'rotating' && e.tournament.ranked ? deltaOf(e.gameIds) : null
+	}));
+	const tournamentTotals = playerTournamentTotals(entries);
+
 	return {
 		player,
 		avatar: creatureFor(player.id, player.avatar),
@@ -93,6 +124,8 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		series,
 		stats,
 		history,
+		tournaments,
+		tournamentTotals,
 		mvps: mvpCounts.get(id) ?? 0
 	};
 };

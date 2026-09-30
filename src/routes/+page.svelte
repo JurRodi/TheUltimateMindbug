@@ -29,6 +29,7 @@
 			: s < 0
 				? { text: `L${-s}`, tone: 'l' as const }
 				: { text: '–', tone: 'none' as const };
+	const titleChips = (n: number) => (n > 0 ? [{ text: `🏆 ${n}`, tone: 'mvp' as const }] : []);
 	const mvpChips = (n: number) => (n > 0 ? [{ text: `${n} MVP`, tone: 'mvp' as const }] : []);
 	// Win% chip: green above 50%, red below, neutral at exactly 50% (or no games).
 	const winPctChip = (winRate: number, games: number) => {
@@ -50,7 +51,8 @@
 				{ text: `${r.games} GP` },
 				winPctChip(r.winRate, r.games),
 				streakChip(r.streak),
-				...mvpChips(r.mvps)
+				...mvpChips(r.mvps),
+				...titleChips(r.titles)
 			],
 			href: resolve('/players/[id]', { id: String(r.player.id) })
 		}))
@@ -215,7 +217,8 @@
 							{ text: `${r.games} GP` },
 							winPctChip(r.winRate, r.games),
 							streakChip(r.streak),
-							...mvpChips(r.mvps)
+							...mvpChips(r.mvps),
+							...titleChips(r.titles)
 						]}
 						power={r.rated ? r.rating : '—'}
 						powerLabel={r.rated ? 'RATING' : 'UNRATED'}

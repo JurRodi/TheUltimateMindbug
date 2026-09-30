@@ -2,6 +2,8 @@ import { db } from '$lib/server/db';
 import { getPlayers, getAllGames, getMvpCounts } from '$lib/server/db/queries';
 import { computeRatings } from '$lib/rating/engine';
 import { allPlayerStats } from '$lib/stats/aggregate';
+import { getTournaments } from '$lib/server/db/tournaments';
+import { titleCounts } from '$lib/tournament/summary';
 import { teamStats } from '$lib/stats/teams';
 import { weekSummary } from '$lib/stats/summary';
 import type { Track, DateRange } from '$lib/types';
@@ -36,11 +38,9 @@ export const load: PageServerLoad = async ({ url, cookies, locals }) => {
 	// destructure defaults cover the disabled case (queries absent from the batch).
 	const empty = new Map<number, number>();
 	const mvpCalls = locals.flags.mvp ? [getMvpCounts(db), getMvpCounts(db, weekAgoIso)] : [];
-	const [players, games, mvpCounts = empty, weeklyMvpCounts = empty] = await Promise.all([
-		getPlayers(db),
-		getAllGames(db),
-		...mvpCalls
-	]);
+	const [players, games, allTournaments, mvpCounts = empty, weeklyMvpCounts = empty] =
+		await Promise.all([getPlayers(db), getAllGames(db), getTournaments(db), ...mvpCalls]);
+	const titles = titleCounts(allTournaments);
 	const nameById = new Map(players.map((p) => [p.id, p.name]));
 	const avatarById = new Map(players.map((p) => [p.id, p.avatar]));
 
@@ -65,7 +65,8 @@ export const load: PageServerLoad = async ({ url, cookies, locals }) => {
 				wins: s.wins,
 				winRate: s.winRate,
 				streak: s.streak,
-				mvps: mvpCounts.get(p.id) ?? 0
+				mvps: mvpCounts.get(p.id) ?? 0,
+				titles: titles.get(p.id) ?? 0
 			};
 		})
 		.sort((a, b) => (a.rated === b.rated ? b.rating - a.rating : a.rated ? -1 : 1));
